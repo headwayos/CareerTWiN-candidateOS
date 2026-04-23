@@ -1,75 +1,127 @@
 # CareerTwin Candidate OS
 
-CareerTwin Candidate OS is a local-first, developer-native operating system for managing career artifacts, tracking job applications, and publishing decision packets to the CareerTwin founder marketplace. 
+A local-first, CLI-native operating system for managing career artifacts, evaluating job postings, and publishing decision packets to the CareerTwin founder marketplace.
 
-Built as a strict CLI-first ecosystem, your data lives securely on your local file system within the `.careertwin/` directory.
+Your data lives on your filesystem in `.careertwin/`. The Web UI is a secondary inspector. The CLI is the product.
 
-> **Note:** The Web UI (`apps/web`) is strictly a secondary, read-only inspector and onboarding surface. The CLI and local filesystem remain the primary product foundation.
+---
 
-## 🚀 Quick Start & Smoke Test
+## Repository Development Setup
 
-Get the Candidate OS running on your machine and run your first smoke test in under 2 minutes.
+These instructions are for developers cloning and building the monorepo.
 
-### 1. Installation & Build
+### Prerequisites
+- Node.js ≥ 20
+- npm ≥ 10
+
+### Clone & Build
 
 ```bash
-# Clone the repository
 git clone https://github.com/headwayos/CareerTWiN-candidateOS.git
 cd CareerTWiN-candidateOS
 
-# Install monorepo dependencies
+# Install all workspace dependencies
 npm install
 
-# Build all workspaces in dependency order
-npm run build --workspaces --if-present
-
-# Link the CLI globally so you can use the 'ct' command anywhere
-cd apps/cli
-npm link
-cd ../..
+# Build every workspace in dependency order
+for pkg in packages/schemas packages/engine packages/document-engine packages/passport packages/shared packages/adapters apps/cli; do
+  echo "Building $pkg..." && (cd $pkg && npm run build)
+done
 ```
 
-### 2. First-Run Smoke Test
-
-Now that the CLI is linked, initialize your first Candidate OS environment and check its health.
+### Verify the Build
 
 ```bash
-# Initialize the local OS environment (creates .careertwin/)
-ct init
-
-# Run the system doctor to verify environment health
-ct doctor
+# This is the deterministic local execution path.
+# It runs the CLI from the built dist/ — no npm link, no stale global binary.
+npm run ct -- --version
+# → 0.1.0
 ```
 
-If everything is set up correctly, `ct doctor` will output green checks for Node.js, the `.careertwin/` directory, and your configuration file.
+---
+
+## Candidate OS Usage
+
+Once the repo is built, every `ct` command is invoked via `npm run ct -- <command>` from the repo root.
+
+### First-Run Smoke Test
+
+```bash
+# 1. Initialize the local OS
+npm run ct -- init
+
+# 2. Check environment health and provider readiness
+npm run ct -- doctor
+
+# 3. Import a resume (requires OPENAI_API_KEY for live parsing)
+npm run ct -- cv import my-resume.txt
+
+# 4. Or use demo mode without a provider
+npm run ct -- cv import my-resume.txt --mock
+
+# 5. View your profile
+npm run ct -- profile show
+```
+
+### Provider Configuration
+
+The Candidate OS uses a generic `ModelGateway` that supports any OpenAI-compatible provider.
+
+```bash
+# OpenAI
+export OPENAI_API_KEY="sk-..."
+
+# Then run AI-dependent commands
+npm run ct -- cv import my-resume.txt
+npm run ct -- evaluate job-description.txt
+```
+
+If no provider is configured, AI commands will fail loudly with setup instructions. You can always use `--mock` to test without a provider.
+
+### Optional: LaTeX Resume Compilation
+
+Install [Tectonic](https://tectonic-typesetting.github.io/) for PDF compilation:
+
+```bash
+# macOS
+brew install tectonic
+
+# Then build a resume
+npm run ct -- resume build --mode ats
+```
+
+If Tectonic is not installed, the `.tex` source will still be generated; only PDF compilation is skipped.
 
 ---
 
-## 🛠 Troubleshooting
+## Troubleshooting
 
-**Error: `zsh: command not found: ct`**
-* **Cause**: The `npm link` step did not place the executable in your system's PATH.
-* **Fix**: Ensure your npm global bin directory is in your PATH (`export PATH="$(npm config get prefix)/bin:$PATH"`), or run the CLI via `npx ct` from the project root. Alternatively, re-run `chmod +x apps/cli/dist/index.js` followed by `npm link` inside the `apps/cli` directory.
+**`npm run ct` says "Missing script"**
+→ You are not in the repo root, or `package.json` is missing the `ct` script. Run from the cloned directory.
 
-**Error: `Cannot find module '@careertwin/engine'`**
-* **Cause**: Workspaces were not built in the correct dependency order.
-* **Fix**: Ensure you run `npm run build --workspaces --if-present` from the monorepo root to populate the `dist/` directories of all internal packages.
+**`Cannot find module '@careertwin/engine'`**
+→ Workspaces were not built. Run the full build loop above.
 
-**Error: `MISSING_API_KEY` during evaluation**
-* **Cause**: You are attempting to run an OpenAI-powered command (`ct evaluate`, `ct tailor`, `ct cv import`) without configuring your API key.
-* **Fix**: Provide your OpenAI key via the environment (`export OPENAI_API_KEY="sk-..."`) or configure it permanently in `.careertwin/config.json`.
+**`Provider (openai) Not configured` in `ct doctor`**
+→ Set `export OPENAI_API_KEY="sk-..."` or run with `--mock`.
+
+**`ct cv import` creates `[DEMO] Mock User`**
+→ You used the `--mock` flag. Remove it and configure a provider for real parsing.
 
 ---
 
-## 🤖 Assistant Adapters
+## Assistant Adapters
 
-The Candidate OS is designed to be operated autonomously by AI IDEs. 
-The current primary integration is the **Antigravity Adapter**, which uses OpenAI Structured Outputs to strictly enforce our Zod schemas during ingestion and tailoring.
+The OS is designed to be operated by AI IDEs autonomously.
 
-Other AI IDEs, such as **Claude Code**, can operate the system via the CLI immediately and can be seamlessly upgraded to native adapters using the shared `AssistantAdapter` Contract.
+- **Primary**: The **Antigravity Adapter** wraps the Engine as a thin operator surface.
+- **Immediate**: **Claude Code**, **Trae**, or any terminal-capable AI can operate the system via `ct` commands directly.
+- **Extensible**: New adapters implement the shared `AssistantAdapter` contract — they do not contain inference logic, which lives in the Engine's `ModelGateway`.
 
-## 📚 Documentation Reference
+---
 
-- **[CLI Reference](docs/CLI_REFERENCE.md)**: Full command list and examples.
-- **[Passport Trust Boundaries](docs/PASSPORT.md)**: Details on the Decision Packet and data visibility.
-- **[Contributing Guide](CONTRIBUTING.md)**: OSS guidelines and setup instructions.
+## Documentation
+
+- **[CLI Reference](docs/CLI_REFERENCE.md)** — Full command list with examples
+- **[Passport & Trust Boundaries](docs/PASSPORT.md)** — Data visibility and marketplace behavior
+- **[Contributing](CONTRIBUTING.md)** — OSS setup and guidelines

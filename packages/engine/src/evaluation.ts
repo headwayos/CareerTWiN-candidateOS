@@ -1,60 +1,86 @@
+import crypto from 'crypto';
 import { 
-  JobPostingSchema, 
   EvaluationRunSchema,
-  type JobPosting,
   type EvaluationRun,
   type CandidateProfile
 } from '@careertwin/schemas';
 import fs from 'fs-extra';
 import { WorkspaceManager } from './workspace';
+import { ModelGateway } from './gateway';
 
 export class EvaluationEngine {
-  constructor(private workspace: WorkspaceManager) {}
+  constructor(
+    private workspace: WorkspaceManager,
+    private gateway?: ModelGateway
+  ) {}
 
-  async evaluateJob(jdText: string, profile: CandidateProfile): Promise<EvaluationRun> {
-    // In a real implementation, this would use an LLM to parse JD and compare with profile.
-    
-    const jobId = crypto.randomUUID() as any;
-    const job: JobPosting = {
-      id: jobId,
-      title: "Software Engineer", // Mock
-      company: "Startup X",
-      remote: false,
-      description: jdText,
-      metadata: {},
-      parsedAt: new Date().toISOString(),
-    };
+  async evaluateJob(jdText: string, profile: CandidateProfile, options?: { mock?: boolean }): Promise<EvaluationRun> {
+    if (options?.mock) {
+      return this.mockEvaluation(jdText);
+    }
 
-    // Mock Scoring Logic
-    const evaluation: EvaluationRun = {
-      jobId: jobId,
-      evaluatedAt: new Date().toISOString(),
-      scores: {
-        overall: 85,
-        skills: 90,
-        experience: 80,
-        startupFit: 85,
-      },
-      analysis: {
-        matches: ["TypeScript", "Node.js", "CLI development"],
-        gaps: ["React.js", "Docker"],
-        risks: ["Seniority slightly above current level"],
-        recommendation: "Strong match. Focus on your CLI experience in the interview.",
-        actionableFixes: ["Highlight Docker side-project", "Update skills section with React if applicable"],
-      },
-      senioritySignal: "senior",
-    };
+    if (!this.gateway) {
+      throw new Error(
+        'ModelGateway is not configured.\n' +
+        '  To use live evaluation, set your provider credentials:\n' +
+        '    export OPENAI_API_KEY="sk-..."\n' +
+        '  Or run with --mock for demo data:\n' +
+        '    npm run ct -- evaluate --mock'
+      );
+    }
 
-    const validated = EvaluationRunSchema.parse(evaluation);
-    await this.saveEvaluation(job, validated);
+    const readiness = await this.gateway.checkReadiness();
+    if (!readiness.ready) {
+      throw new Error(
+        `Provider "${readiness.provider}" is not ready.\n` +
+        `  Credentials present: ${readiness.hasCredentials}\n` +
+        `  Model: ${readiness.configuredModel}\n` +
+        '  Run "npm run ct -- doctor" for details.'
+      );
+    }
+
+    const parsed = await this.gateway.generateStructured<EvaluationRun>(
+      `You are an expert technical recruiter and career strategist. Evaluate the candidate profile against the job description. Provide detailed scores (overall, skills, experience, startupFit on a 0-100 scale), gap analysis (matches, gaps, risks), a recommendation, actionable fixes, and a seniority signal (junior/mid/senior/staff/principal). Output strictly as JSON matching the schema.`,
+      `CANDIDATE PROFILE:\n${JSON.stringify(profile, null, 2)}\n\nJOB DESCRIPTION:\n${jdText}`,
+      EvaluationRunSchema,
+      'EvaluationRun'
+    );
+
+    if (!parsed.jobId) (parsed as any).jobId = crypto.randomUUID();
+    if (!parsed.evaluatedAt) (parsed as any).evaluatedAt = new Date().toISOString();
+
+    const validated = EvaluationRunSchema.parse(parsed);
+    await this.saveEvaluation(validated);
     return validated;
   }
 
-  async saveEvaluation(job: JobPosting, run: EvaluationRun) {
-    const jobPath = this.workspace.getPath(`jobs/postings/${job.id}.json`);
+  private async mockEvaluation(jdText: string): Promise<EvaluationRun> {
+    const evaluation: EvaluationRun = {
+      jobId: crypto.randomUUID() as any,
+      evaluatedAt: new Date().toISOString(),
+      scores: {
+        overall: 0,
+        skills: 0,
+        experience: 0,
+        startupFit: 0,
+      },
+      analysis: {
+        matches: [],
+        gaps: ["[DEMO] No real analysis performed"],
+        risks: ["[DEMO] Run without --mock for real evaluation"],
+        recommendation: "[DEMO] Configure a provider and re-run for real results.",
+        actionableFixes: [],
+      },
+      senioritySignal: "mid",
+    };
+    const validated = EvaluationRunSchema.parse(evaluation);
+    await this.saveEvaluation(validated);
+    return validated;
+  }
+
+  async saveEvaluation(run: EvaluationRun) {
     const evalPath = this.workspace.getPath(`jobs/evaluations/${run.jobId}.json`);
-    
-    await fs.writeJson(jobPath, job, { spaces: 2 });
+    await fs.ensureDir(this.workspace.getPath('jobs/evaluations'));
     await fs.writeJson(evalPath, run, { spaces: 2 });
   }
 }

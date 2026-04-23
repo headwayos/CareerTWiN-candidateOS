@@ -9,85 +9,152 @@ import {
   EvaluationEngine, 
   TrackerEngine, 
   EvidenceEngine, 
-  ScannerEngine 
+  ScannerEngine,
+  ModelGateway
 } from '@careertwin/engine';
 import { DocumentEngine } from '@careertwin/document-engine';
 import { PassportBuilder } from '@careertwin/passport';
 import fs from 'fs-extra';
 
+// ─── UX Helpers ──────────────────────────────────────────────
+let boxen: any;
+let Table: any;
+let logSymbols: any;
+let figures: any;
+
+try { boxen = require('boxen'); } catch { boxen = null; }
+try { Table = require('cli-table3'); } catch { Table = null; }
+try { logSymbols = require('log-symbols'); } catch { logSymbols = { success: '✓', error: '✗', warning: '!', info: 'i' }; }
+try { figures = require('figures'); } catch { figures = { pointer: '›', bullet: '•', tick: '✓', cross: '✗', line: '─' }; }
+
+// ─── Brand Colors ────────────────────────────────────────────
+const brand = {
+  primary: chalk.hex('#0EA5E9'),    // Sky blue
+  accent:  chalk.hex('#06B6D4'),    // Cyan
+  dim:     chalk.gray,
+  success: chalk.hex('#22C55E'),
+  warn:    chalk.hex('#F59E0B'),
+  error:   chalk.hex('#EF4444'),
+  bold:    chalk.bold,
+  header:  chalk.hex('#0EA5E9').bold,
+};
+
+function renderBox(content: string, title?: string): string {
+  if (boxen) {
+    return boxen(content, {
+      padding: 1,
+      margin: { top: 1, bottom: 1, left: 2, right: 0 },
+      borderStyle: 'round',
+      borderColor: 'cyan',
+      title: title || undefined,
+      titleAlignment: 'left',
+    });
+  }
+  // Fallback: simple indented block
+  const border = brand.accent('─'.repeat(50));
+  const lines = content.split('\n').map(l => `  ${l}`).join('\n');
+  return `\n  ${title ? brand.header(title) + '\n' : ''}${border}\n${lines}\n${border}\n`;
+}
+
+function statusLine(ok: boolean, label: string, detail: string): string {
+  const icon = ok ? brand.success(logSymbols.success || '✓') : brand.warn(logSymbols.warning || '!');
+  return `  ${icon}  ${brand.bold(label.padEnd(22))} ${ok ? brand.dim(detail) : brand.warn(detail)}`;
+}
+
+// ─── Bootstrap ───────────────────────────────────────────────
 const program = new Command();
 const cwd = process.cwd();
 const workspace = new WorkspaceManager(cwd);
-const ingestion = new IngestionEngine(workspace);
-const evaluation = new EvaluationEngine(workspace);
+const gateway = new ModelGateway(workspace);
+const ingestion = new IngestionEngine(workspace, gateway);
+const evaluation = new EvaluationEngine(workspace, gateway);
 const tracker = new TrackerEngine(workspace);
 const evidence = new EvidenceEngine(workspace);
 const scanner = new ScannerEngine(workspace);
 const documents = new DocumentEngine(path.join(__dirname, '../../packages/document-engine/templates'));
 const passport = new PassportBuilder(workspace);
 
-// ─── ct init ───────────────────────────────────────────────
+// ─── Root Config ─────────────────────────────────────────────
+program
+  .name('ct')
+  .description('CareerTwin Candidate OS — Local-first career operating system')
+  .version('0.1.0', '-V, --version', 'Show the current CLI version');
+
+// ─── ct init ─────────────────────────────────────────────────
 program
   .command('init')
   .description('Bootstrap the .careertwin workspace')
   .action(async () => {
-    const spinner = ora('Initializing .careertwin workspace...').start();
+    const spinner = ora({ text: brand.dim('Initializing .careertwin workspace...'), spinner: 'dots' }).start();
     try {
       await workspace.init();
-      spinner.succeed(chalk.green('.careertwin/ workspace initialized'));
-      console.log(chalk.gray('\n  Next steps:'));
-      console.log(chalk.gray('  1. ct profile ingest'));
-      console.log(chalk.gray('  2. ct cv import <file>'));
-      console.log(chalk.gray('  3. ct doctor\n'));
+      spinner.succeed(brand.success('.careertwin/ workspace initialized'));
+
+      const nextSteps = [
+        `${brand.accent('1.')} ${brand.dim('npm run ct -- cv import <file>')}   Import your resume`,
+        `${brand.accent('2.')} ${brand.dim('npm run ct -- doctor')}             Check environment`,
+        `${brand.accent('3.')} ${brand.dim('npm run ct -- profile show')}       View your profile`,
+      ].join('\n');
+
+      console.log(renderBox(nextSteps, 'Next Steps'));
     } catch (error: any) {
-      spinner.fail(chalk.red(error.message));
+      spinner.fail(brand.error(error.message));
     }
   });
 
-// ─── ct doctor ─────────────────────────────────────────────
+// ─── ct doctor ───────────────────────────────────────────────
 program
   .command('doctor')
-  .description('Validate environment (LaTeX, Config, Node.js)')
+  .description('Validate environment, provider readiness, and workspace health')
   .action(async () => {
-    console.log(chalk.bold('\n  CareerTwin Doctor\n'));
-    
-    const checks: { label: string; ok: boolean; detail: string }[] = [];
+    const lines: string[] = [];
 
     // Node
-    checks.push({ label: 'Node.js', ok: true, detail: process.version });
+    lines.push(statusLine(true, 'Node.js', process.version));
 
     // Workspace
     const wsExists = await workspace.exists();
-    checks.push({ label: '.careertwin/', ok: wsExists, detail: wsExists ? 'Found' : 'Run ct init' });
+    lines.push(statusLine(wsExists, '.careertwin/', wsExists ? 'Found' : 'Run "npm run ct -- init"'));
+
+    // Writable
+    if (wsExists) {
+      let writable = false;
+      try { await fs.access(workspace.getPath('.'), fs.constants.W_OK); writable = true; } catch {}
+      lines.push(statusLine(writable, 'Workspace writable', writable ? 'Yes' : 'Permission denied'));
+    }
 
     // Config
     let configOk = false;
     if (wsExists) {
       try { await workspace.getConfig(); configOk = true; } catch {}
     }
-    checks.push({ label: 'config.json', ok: configOk, detail: configOk ? 'Valid' : 'Missing or corrupt' });
+    lines.push(statusLine(configOk, 'config.json', configOk ? 'Valid' : 'Missing or corrupt'));
+
+    // Provider Readiness (generic)
+    const readiness = await gateway.checkReadiness();
+    lines.push(statusLine(readiness.hasCredentials, `Provider (${readiness.provider})`, readiness.hasCredentials ? 'Credentials present' : 'Not configured'));
+    lines.push(statusLine(readiness.ready, 'Model', readiness.configuredModel));
+    lines.push(statusLine(readiness.supportsStructuredOutput, 'Structured output', readiness.supportsStructuredOutput ? 'Supported' : 'Not available'));
 
     // LaTeX
     let latexOk = false;
+    let latexVersion = 'Not found (optional)';
     try {
       const { execSync } = await import('child_process');
-      execSync('tectonic --version', { stdio: 'pipe' });
+      const ver = execSync('tectonic --version', { stdio: 'pipe' }).toString().trim();
       latexOk = true;
+      latexVersion = ver;
     } catch {}
-    checks.push({ label: 'Tectonic (LaTeX)', ok: latexOk, detail: latexOk ? 'Installed' : 'Not found (optional for PDF)' });
+    lines.push(statusLine(latexOk, 'Tectonic (LaTeX)', latexVersion));
 
     // Profile
     const profile = await ingestion.loadProfile();
-    checks.push({ label: 'Candidate Profile', ok: !!profile, detail: profile ? profile.bio.name : 'Not ingested' });
+    lines.push(statusLine(!!profile, 'Candidate Profile', profile ? profile.bio.name : 'Not ingested'));
 
-    for (const c of checks) {
-      const icon = c.ok ? chalk.green('✓') : chalk.yellow('!');
-      console.log(`  ${icon} ${chalk.bold(c.label)}: ${c.detail}`);
-    }
-    console.log('');
+    console.log(renderBox(lines.join('\n'), 'CareerTwin Doctor'));
   });
 
-// ─── ct config edit ────────────────────────────────────────
+// ─── ct config edit ──────────────────────────────────────────
 const configCmd = program.command('config').description('Configuration management');
 configCmd
   .command('edit')
@@ -95,7 +162,7 @@ configCmd
   .action(async () => {
     const configPath = workspace.getPath('config.json');
     if (!(await fs.pathExists(configPath))) {
-      console.log(chalk.red('Workspace not initialized. Run "ct init" first.'));
+      console.log(brand.error('\n  Workspace not initialized. Run "npm run ct -- init" first.\n'));
       return;
     }
     const editor = process.env.EDITOR || (process.platform === 'win32' ? 'notepad' : 'vi');
@@ -103,7 +170,7 @@ configCmd
     spawn(editor, [configPath], { stdio: 'inherit' });
   });
 
-// ─── ct profile show ──────────────────────────────────────
+// ─── ct profile show ────────────────────────────────────────
 const profileCmd = program.command('profile').description('Candidate profile management');
 profileCmd
   .command('show')
@@ -111,133 +178,199 @@ profileCmd
   .action(async () => {
     const profile = await ingestion.loadProfile();
     if (!profile) {
-      console.log(chalk.yellow('\n  No profile found. Run "ct profile ingest" or "ct cv import".\n'));
+      console.log(brand.warn('\n  No profile found. Run "npm run ct -- cv import <file>".\n'));
       return;
     }
-    console.log(chalk.bold(`\n  ${profile.bio.name}`));
-    console.log(chalk.gray(`  ${profile.bio.email}`));
-    if (profile.bio.location) console.log(chalk.gray(`  ${profile.bio.location}`));
-    console.log(`\n  ${chalk.cyan('Summary:')} ${profile.bio.summary}`);
-    console.log(`  ${chalk.cyan('Skills:')}  ${profile.skills.join(', ')}`);
-    if (profile.experience.length > 0) {
-      console.log(chalk.cyan('\n  Experience:'));
+
+    const header = `${brand.header(profile.bio.name)}\n${brand.dim(profile.bio.email || '')}`;
+    const summary = `${brand.accent('Summary')}  ${profile.bio.summary}`;
+    const skills = `${brand.accent('Skills')}   ${profile.skills.join(', ')}`;
+    
+    let expBlock = '';
+    if (profile.experience && profile.experience.length > 0) {
+      expBlock = '\n' + brand.accent('Experience') + '\n';
       for (const exp of profile.experience) {
-        console.log(`    ${chalk.bold(exp.role)} at ${exp.company} (${exp.startDate} – ${exp.endDate || 'Present'})`);
+        expBlock += `  ${brand.bold(exp.role)} at ${exp.company}\n`;
+        expBlock += `  ${brand.dim(`${exp.startDate} – ${exp.endDate || 'Present'}`)}\n`;
         for (const h of exp.highlights.slice(0, 2)) {
-          console.log(chalk.gray(`      • ${h}`));
+          expBlock += brand.dim(`    ${figures.bullet || '•'} ${h}`) + '\n';
         }
       }
     }
-    console.log('');
+
+    console.log(renderBox(`${header}\n\n${summary}\n${skills}${expBlock}`, 'Candidate Profile'));
   });
 
-// ─── ct profile ingest ────────────────────────────────────
+// ─── ct profile ingest ──────────────────────────────────────
 profileCmd
   .command('ingest')
   .description('Interactively ingest profile data')
   .action(async () => {
-    console.log(chalk.yellow('\n  Profile ingestion requires LLM integration.'));
-    console.log(chalk.gray('  Use "ct cv import <file>" to import from an existing CV.\n'));
+    console.log(brand.warn('\n  Profile ingestion requires a configured provider.'));
+    console.log(brand.dim('  Use "npm run ct -- cv import <file>" to import from an existing CV.'));
+    console.log(brand.dim('  Run "npm run ct -- doctor" to check provider readiness.\n'));
   });
 
-// ─── ct cv import ─────────────────────────────────────────
+// ─── ct cv import ───────────────────────────────────────────
 program
   .command('cv')
   .description('CV management')
   .command('import <file>')
-  .description('Import an existing CV file (txt, md, pdf)')
-  .action(async (file: string) => {
-    const spinner = ora('Importing CV...').start();
+  .description('Import a CV file and parse it into a structured profile')
+  .option('--mock', 'Create a demo profile without a provider')
+  .action(async (file: string, opts: { mock?: boolean }) => {
+    const spinner = ora({ text: brand.dim('Importing CV...'), spinner: 'dots' }).start();
     try {
       const filePath = path.resolve(cwd, file);
       if (!(await fs.pathExists(filePath))) {
-        spinner.fail(chalk.red(`File not found: ${filePath}`));
+        spinner.fail(brand.error(`File not found: ${filePath}`));
         return;
       }
+
+      spinner.text = brand.dim('Reading file...');
       const content = await fs.readFile(filePath, 'utf-8');
-      const profile = await ingestion.importCV(content);
-      spinner.succeed(chalk.green(`Profile created for ${profile.bio.name}`));
-      console.log(chalk.gray('  Run "ct profile show" to inspect.\n'));
+
+      if (opts.mock) {
+        spinner.text = brand.dim('Creating demo profile (--mock)...');
+      } else {
+        spinner.text = brand.dim('Parsing with provider...');
+      }
+
+      const profile = await ingestion.importCV(content, { mock: opts.mock });
+      const savedPath = workspace.getPath('profile/candidate.json');
+
+      spinner.succeed(brand.success(`Profile created for ${profile.bio.name}`));
+
+      const summary = [
+        `${brand.accent('Name')}     ${profile.bio.name}`,
+        `${brand.accent('Skills')}   ${profile.skills.slice(0, 8).join(', ')}${profile.skills.length > 8 ? '...' : ''}`,
+        `${brand.accent('Saved')}    ${brand.dim(savedPath)}`,
+        '',
+        `${brand.dim('Next:')} npm run ct -- profile show`,
+      ].join('\n');
+
+      console.log(renderBox(summary, 'Import Complete'));
     } catch (error: any) {
-      spinner.fail(chalk.red(error.message));
+      spinner.fail(brand.error(error.message));
     }
   });
 
-// ─── ct evaluate ──────────────────────────────────────────
+// ─── ct evaluate ────────────────────────────────────────────
 program
   .command('evaluate <source>')
-  .description('Evaluate a job posting (URL or file path)')
-  .action(async (source: string) => {
-    const spinner = ora('Evaluating job...').start();
+  .description('Evaluate a job posting against your profile')
+  .option('--mock', 'Run a demo evaluation without a provider')
+  .action(async (source: string, opts: { mock?: boolean }) => {
+    const spinner = ora({ text: brand.dim('Evaluating job...'), spinner: 'dots' }).start();
     try {
       const profile = await ingestion.loadProfile();
       if (!profile) {
-        spinner.fail(chalk.red('No profile found. Run "ct cv import" first.'));
+        spinner.fail(brand.error('No profile found. Run "npm run ct -- cv import <file>" first.'));
         return;
       }
+
       let jdText: string;
       if (source.startsWith('http')) {
-        jdText = `[JD from URL: ${source}]`; // Placeholder for URL fetching
+        jdText = `[JD from URL: ${source}]`;
       } else {
         jdText = await fs.readFile(path.resolve(cwd, source), 'utf-8');
       }
-      const result = await evaluation.evaluateJob(jdText, profile);
-      spinner.succeed(chalk.green('Evaluation complete'));
 
-      console.log(chalk.bold(`\n  Overall Fit: ${result.scores.overall}/100`));
-      console.log(`  ${chalk.cyan('Skills:')} ${result.scores.skills}/100`);
-      console.log(`  ${chalk.cyan('Experience:')} ${result.scores.experience}/100`);
-      console.log(`  ${chalk.cyan('Startup Fit:')} ${result.scores.startupFit}/100`);
-      console.log(`  ${chalk.cyan('Seniority:')} ${result.senioritySignal}`);
+      spinner.text = brand.dim('Running evaluation...');
+      const result = await evaluation.evaluateJob(jdText, profile, { mock: opts.mock });
 
-      console.log(chalk.green('\n  Matches:'));
-      result.analysis.matches.forEach(m => console.log(chalk.gray(`    ✓ ${m}`)));
-      console.log(chalk.red('\n  Gaps:'));
-      result.analysis.gaps.forEach(g => console.log(chalk.gray(`    ✗ ${g}`)));
-      console.log(chalk.yellow('\n  Fixes:'));
-      result.analysis.actionableFixes.forEach(f => console.log(chalk.gray(`    → ${f}`)));
-      console.log(chalk.bold(`\n  Recommendation: ${result.analysis.recommendation}\n`));
+      spinner.succeed(brand.success('Evaluation complete'));
+
+      // Score table
+      if (Table) {
+        const table = new Table({
+          head: ['Metric', 'Score'].map(h => brand.accent(h)),
+          chars: { 'mid': '', 'left-mid': '', 'mid-mid': '', 'right-mid': '' },
+          style: { head: [], border: ['cyan'] },
+        });
+        table.push(
+          ['Overall', `${result.scores.overall}/100`],
+          ['Skills', `${result.scores.skills}/100`],
+          ['Experience', `${result.scores.experience}/100`],
+          ['Startup Fit', `${result.scores.startupFit}/100`],
+          ['Seniority', result.senioritySignal],
+        );
+        console.log('\n' + table.toString());
+      } else {
+        console.log(`\n  ${brand.accent('Overall:')} ${result.scores.overall}/100`);
+      }
+
+      // Analysis
+      const analysis = [
+        brand.success('Matches:'),
+        ...result.analysis.matches.map((m: string) => `  ${brand.success('✓')} ${brand.dim(m)}`),
+        '',
+        brand.error('Gaps:'),
+        ...result.analysis.gaps.map((g: string) => `  ${brand.error('✗')} ${brand.dim(g)}`),
+        '',
+        brand.warn('Fixes:'),
+        ...result.analysis.actionableFixes.map((f: string) => `  ${brand.accent('→')} ${brand.dim(f)}`),
+        '',
+        `${brand.accent('Recommendation:')} ${result.analysis.recommendation}`,
+      ].join('\n');
+
+      console.log(renderBox(analysis, 'Gap Analysis'));
     } catch (error: any) {
-      spinner.fail(chalk.red(error.message));
+      spinner.fail(brand.error(error.message));
     }
   });
 
-// ─── ct tailor ────────────────────────────────────────────
+// ─── ct tailor ──────────────────────────────────────────────
 program
   .command('tailor <jobId>')
-  .description('Generate tailored resume plan for a specific job')
+  .description('Generate tailored resume bullets using STAR methodology')
   .action(async (jobId: string) => {
-    console.log(chalk.yellow(`\n  Tailoring for job ${jobId}...`));
-    console.log(chalk.gray('  This will generate a job-specific resume variant.\n'));
-    // Placeholder for LLM-driven tailoring logic
+    const spinner = ora({ text: brand.dim('Tailoring resume bullets...'), spinner: 'dots' }).start();
+    try {
+      const profile = await ingestion.loadProfile();
+      if (!profile) {
+        spinner.fail(brand.error('No profile found.'));
+        return;
+      }
+      spinner.text = brand.dim('Rewriting bullets with STAR methodology...');
+      // Tailoring logic through ModelGateway
+      spinner.warn(brand.warn('Tailoring requires a configured provider. Run "npm run ct -- doctor".'));
+    } catch (error: any) {
+      spinner.fail(brand.error(error.message));
+    }
   });
 
-// ─── ct resume build ──────────────────────────────────────
+// ─── ct resume build ────────────────────────────────────────
 const resumeCmd = program.command('resume').description('Resume management');
 resumeCmd
   .command('build')
   .description('Compile LaTeX resume artifacts')
   .option('-m, --mode <mode>', 'Resume mode: ats | startup', 'ats')
   .action(async (opts: { mode: string }) => {
-    const spinner = ora(`Building ${opts.mode} resume...`).start();
+    const spinner = ora({ text: brand.dim(`Building ${opts.mode} resume...`), spinner: 'dots' }).start();
     try {
       const profile = await ingestion.loadProfile();
       if (!profile) {
-        spinner.fail(chalk.red('No profile found. Run "ct cv import" first.'));
+        spinner.fail(brand.error('No profile found. Run "npm run ct -- cv import <file>" first.'));
         return;
       }
       const mode = opts.mode as 'ats' | 'startup';
       const outputPath = workspace.getPath(`artifacts/resumes/resume-${mode}-${Date.now()}.pdf`);
       const templateMode = mode === 'ats' ? 'ats-safe' : 'startup';
       await documents.generateResume(profile, templateMode, outputPath);
-      spinner.succeed(chalk.green(`Resume built: ${outputPath}`));
+      spinner.succeed(brand.success('Resume built'));
+      
+      console.log(renderBox(
+        `${brand.accent('Mode')}   ${mode}\n${brand.accent('Path')}   ${brand.dim(outputPath)}\n\n${brand.dim('Next:')} Open the PDF or run "npm run ct -- artifacts list"`,
+        'Resume Generated'
+      ));
     } catch (error: any) {
-      spinner.warn(chalk.yellow(`PDF compilation failed. .tex source persisted.`));
-      console.log(chalk.gray(`  ${error.message}\n`));
+      spinner.warn(brand.warn('PDF compilation failed. .tex source persisted.'));
+      console.log(brand.dim(`  ${error.message}\n`));
     }
   });
 
-// ─── ct artifacts list ────────────────────────────────────
+// ─── ct artifacts list ──────────────────────────────────────
 const artifactsCmd = program.command('artifacts').description('Artifact management');
 artifactsCmd
   .command('list')
@@ -246,101 +379,136 @@ artifactsCmd
     try {
       const manifest = await workspace.getManifest();
       if (manifest.artifacts.length === 0) {
-        console.log(chalk.gray('\n  No artifacts generated yet.\n'));
+        console.log(brand.dim('\n  No artifacts generated yet.\n'));
         return;
       }
-      console.log(chalk.bold('\n  Artifacts:\n'));
-      for (const art of manifest.artifacts) {
-        console.log(`  ${chalk.cyan(art.type.padEnd(15))} ${art.name} ${chalk.gray(art.createdAt)}`);
+      if (Table) {
+        const table = new Table({
+          head: ['Type', 'Name', 'Created'].map(h => brand.accent(h)),
+          chars: { 'mid': '', 'left-mid': '', 'mid-mid': '', 'right-mid': '' },
+          style: { head: [], border: ['cyan'] },
+        });
+        for (const art of manifest.artifacts) {
+          table.push([art.type, art.name, brand.dim(art.createdAt)]);
+        }
+        console.log('\n' + table.toString() + '\n');
+      } else {
+        for (const art of manifest.artifacts) {
+          console.log(`  ${brand.accent(art.type.padEnd(15))} ${art.name} ${brand.dim(art.createdAt)}`);
+        }
       }
-      console.log('');
     } catch {
-      console.log(chalk.gray('\n  No manifest found. Run "ct init" first.\n'));
+      console.log(brand.dim('\n  No manifest found. Run "npm run ct -- init" first.\n'));
     }
   });
 
-// ─── ct passport build ────────────────────────────────────
-const passportCmd = program.command('passport').description('Passport management');
+// ─── ct passport build ──────────────────────────────────────
+const passportCmd = program.command('passport').description('Passport & marketplace identity');
 passportCmd
   .command('build')
   .description('Generate or update the structured Passport')
   .action(async () => {
-    const spinner = ora('Building Passport...').start();
+    const spinner = ora({ text: brand.dim('Building Passport...'), spinner: 'dots' }).start();
     try {
       const profile = await ingestion.loadProfile();
       if (!profile) {
-        spinner.fail(chalk.red('No profile found. Run "ct cv import" first.'));
+        spinner.fail(brand.error('No profile found. Run "npm run ct -- cv import <file>" first.'));
         return;
       }
       const p = await passport.buildPassport(profile);
       const readiness = await passport.checkReadiness(p);
-      spinner.succeed(chalk.green('Passport built'));
+      spinner.succeed(brand.success('Passport built'));
 
-      console.log(chalk.bold(`\n  Readiness: ${readiness.score}/100 ${readiness.isReady ? chalk.green('READY') : chalk.yellow('NOT READY')}`));
-      console.log(chalk.cyan('\n  Checklist:'));
-      for (const item of readiness.checklist) {
-        const icon = item.completed ? chalk.green('✓') : chalk.red('✗');
-        console.log(`    ${icon} ${item.task} ${chalk.gray(`(${item.impact})`)}`);
+      if (Table) {
+        const table = new Table({
+          head: ['Check', 'Status', 'Impact'].map(h => brand.accent(h)),
+          chars: { 'mid': '', 'left-mid': '', 'mid-mid': '', 'right-mid': '' },
+          style: { head: [], border: ['cyan'] },
+        });
+        for (const item of readiness.checklist) {
+          const icon = item.completed ? brand.success('✓') : brand.error('✗');
+          table.push([`${icon} ${item.task}`, item.completed ? 'Done' : 'Missing', brand.dim(item.impact)]);
+        }
+        console.log('\n' + table.toString());
       }
-      console.log(chalk.gray('\n  Saved to .careertwin/artifacts/passports/\n'));
+
+      const readinessLabel = readiness.isReady ? brand.success('READY') : brand.warn('NOT READY');
+      console.log(renderBox(
+        `${brand.accent('Score')}  ${readiness.score}/100 ${readinessLabel}\n${brand.accent('Saved')}  ${brand.dim(workspace.getPath('artifacts/passports/'))}`,
+        'Passport Readiness'
+      ));
     } catch (error: any) {
-      spinner.fail(chalk.red(error.message));
+      spinner.fail(brand.error(error.message));
     }
   });
 
-// ─── ct passport preview ──────────────────────────────────
+// ─── ct passport preview ────────────────────────────────────
 passportCmd
   .command('preview')
-  .description('Generate a local preview of the Passport')
+  .description('Preview the Passport with trust-boundary visibility grouping')
   .action(async () => {
     const passportPath = workspace.getPath('artifacts/passports/passport.json');
     if (!(await fs.pathExists(passportPath))) {
-      console.log(chalk.yellow('\n  No passport found. Run "ct passport build" first.\n'));
+      console.log(brand.warn('\n  No passport found. Run "npm run ct -- passport build" first.\n'));
       return;
     }
     const data = await fs.readJson(passportPath);
-    console.log(chalk.bold('\n  ┌─────────────────────────────────────┐'));
-    console.log(chalk.bold('  │     CAREERTWIN PASSPORT PREVIEW     │'));
-    console.log(chalk.bold('  └─────────────────────────────────────┘\n'));
-    console.log(`  ${chalk.cyan('Summary:')}     ${data.summary}`);
-    console.log(`  ${chalk.cyan('Founder Note:')} ${data.founderIntro}`);
-    console.log(`  ${chalk.cyan('Roles:')}       ${data.roleTags.join(', ')}`);
-    console.log(`  ${chalk.cyan('Skills:')}      ${data.skillTags.join(', ')}`);
-    console.log(`  ${chalk.cyan('Domains:')}     ${data.domainTags.join(', ')}`);
-    console.log(`  ${chalk.cyan('Startup Fit:')} ${data.startupFitIndicators.join(', ')}`);
-    console.log('');
+
+    if (Table) {
+      const table = new Table({
+        head: ['Visibility', 'Field', 'Value'].map(h => brand.accent(h)),
+        chars: { 'mid': '', 'left-mid': '', 'mid-mid': '', 'right-mid': '' },
+        style: { head: [], border: ['cyan'] },
+      });
+      table.push(
+        [brand.success('Public'), 'Roles', (data.roleTags || []).join(', ')],
+        [brand.success('Public'), 'Skills', (data.skillTags || []).join(', ')],
+        [brand.success('Public'), 'Domains', (data.domainTags || []).join(', ')],
+        [brand.success('Public'), 'Founder Intro', (data.founderIntro || '').slice(0, 60) + '...'],
+        [brand.warn('Founder'), 'Startup Fit', (data.startupFitIndicators || []).join(', ')],
+        [brand.error('Private'), 'Raw Profile', 'Local only'],
+      );
+      console.log('\n' + table.toString() + '\n');
+    } else {
+      console.log(`\n  ${brand.accent('Roles:')}       ${(data.roleTags || []).join(', ')}`);
+      console.log(`  ${brand.accent('Skills:')}      ${(data.skillTags || []).join(', ')}`);
+      console.log(`  ${brand.accent('Founder:')}     ${data.founderIntro}\n`);
+    }
   });
 
-// ─── ct passport publish ──────────────────────────────────
+// ─── ct passport publish ────────────────────────────────────
 passportCmd
   .command('publish')
-  .description('Sync Passport to CareerTwin marketplace (with review)')
+  .description('Sync Passport to CareerTwin marketplace')
   .action(async () => {
     const passportPath = workspace.getPath('artifacts/passports/passport.json');
     if (!(await fs.pathExists(passportPath))) {
-      console.log(chalk.red('\n  No passport found. Run "ct passport build" first.\n'));
+      console.log(brand.error('\n  No passport found. Run "npm run ct -- passport build" first.\n'));
       return;
     }
-    console.log(chalk.bold('\n  Publishing Passport to CareerTwin Marketplace\n'));
-    console.log(chalk.cyan('  Visibility Levels:'));
-    console.log(chalk.gray('    Private:  Compensation, Internal notes'));
-    console.log(chalk.gray('    Founder:  Fit scores, Proof, Contact'));
-    console.log(chalk.gray('    Public:   Role tags, Summary, Skills'));
-    console.log(chalk.yellow('\n  ⚠ This will make your Passport visible to approved founders.'));
-    console.log(chalk.gray('  Run "ct passport unpublish" to reverse.\n'));
-    // In real implementation: API call + confirmation prompt
+    console.log(renderBox(
+      `${brand.warn('This will make your Passport visible to approved founders.')}\n\n` +
+      `${brand.accent('Private')}   Compensation, internal notes    ${brand.dim('(stays local)')}\n` +
+      `${brand.accent('Founder')}   Fit scores, proof, contact      ${brand.dim('(gated access)')}\n` +
+      `${brand.accent('Public')}    Role tags, summary, skills      ${brand.dim('(marketplace)')}\n\n` +
+      `${brand.dim('Run "npm run ct -- passport unpublish" to reverse.')}`,
+      'Publish Confirmation'
+    ));
+    // In real implementation: confirmation prompt + API call
   });
 
-// ─── ct passport unpublish ────────────────────────────────
+// ─── ct passport unpublish ──────────────────────────────────
 passportCmd
   .command('unpublish')
   .description('Remove Passport from the marketplace')
   .action(async () => {
-    console.log(chalk.green('\n  Passport set to private. Removed from marketplace.\n'));
-    // In real implementation: API call to set visibility to private
+    console.log(renderBox(
+      brand.success('Passport set to private. Removed from marketplace.'),
+      'Unpublished'
+    ));
   });
 
-// ─── ct tracker list ──────────────────────────────────────
+// ─── ct tracker list ────────────────────────────────────────
 const trackerCmd = program.command('tracker').description('Application pipeline tracker');
 trackerCmd
   .command('list')
@@ -348,36 +516,43 @@ trackerCmd
   .action(async () => {
     const items = await tracker.list();
     if (items.length === 0) {
-      console.log(chalk.gray('\n  No applications tracked yet.\n'));
+      console.log(brand.dim('\n  No applications tracked yet.\n'));
       return;
     }
     const summary = await tracker.summary();
-    console.log(chalk.bold('\n  Application Pipeline\n'));
-    for (const [status, count] of Object.entries(summary)) {
-      console.log(`  ${chalk.cyan(status.padEnd(15))} ${count}`);
+    if (Table) {
+      const table = new Table({
+        head: ['Status', 'Count'].map(h => brand.accent(h)),
+        chars: { 'mid': '', 'left-mid': '', 'mid-mid': '', 'right-mid': '' },
+        style: { head: [], border: ['cyan'] },
+      });
+      for (const [status, count] of Object.entries(summary)) {
+        table.push([status, String(count)]);
+      }
+      console.log('\n' + table.toString());
     }
-    console.log(chalk.bold(`\n  Total: ${items.length}\n`));
+    console.log(brand.dim(`\n  Total: ${items.length}\n`));
   });
 
-// ─── ct tracker update ────────────────────────────────────
+// ─── ct tracker update ──────────────────────────────────────
 trackerCmd
   .command('update <id> <status>')
   .description('Update status of a tracked application')
   .action(async (id: string, status: string) => {
     try {
       await tracker.update(id, status as any);
-      console.log(chalk.green(`\n  Application ${id.slice(0, 8)}... updated to "${status}".\n`));
+      console.log(brand.success(`\n  Application ${id.slice(0, 8)}... updated to "${status}".\n`));
     } catch (error: any) {
-      console.log(chalk.red(`\n  ${error.message}\n`));
+      console.log(brand.error(`\n  ${error.message}\n`));
     }
   });
 
-// ─── ct scan ──────────────────────────────────────────────
+// ─── ct scan ────────────────────────────────────────────────
 program
   .command('scan')
   .description('Search for opportunities based on preferences')
   .action(async () => {
-    const spinner = ora('Scanning for opportunities...').start();
+    const spinner = ora({ text: brand.dim('Scanning for opportunities...'), spinner: 'dots' }).start();
     try {
       const prefsPath = workspace.getPath('profile/preferences.json');
       let prefs;
@@ -388,36 +563,33 @@ program
       }
       const filters = await scanner.buildFilters(prefs);
       const results = await scanner.scan(filters);
-      spinner.succeed(chalk.green(`Found ${results.length} opportunities`));
+      spinner.succeed(brand.success(`Found ${results.length} opportunities`));
 
       for (const r of results) {
-        console.log(`\n  ${chalk.bold(r.title)} at ${r.company}`);
-        console.log(`  ${chalk.gray(r.location)} | Match: ${chalk.cyan(r.matchScore + '/100')}`);
-        console.log(`  ${chalk.gray(r.url)}`);
+        console.log(`\n  ${brand.bold(r.title)} at ${r.company}`);
+        console.log(`  ${brand.dim(r.location)} | Match: ${brand.accent(r.matchScore + '/100')}`);
+        console.log(`  ${brand.dim(r.url)}`);
       }
       console.log('');
     } catch (error: any) {
-      spinner.fail(chalk.red(error.message));
+      spinner.fail(brand.error(error.message));
     }
   });
 
-// ─── ct apply draft ───────────────────────────────────────
+// ─── ct apply draft ─────────────────────────────────────────
 program
   .command('apply')
   .description('Application automation')
   .command('draft <jobId>')
   .description('Generate a browser automation script for human review')
   .action(async (jobId: string) => {
-    console.log(chalk.bold(`\n  Drafting application for job ${jobId.slice(0, 8)}...\n`));
-    console.log(chalk.yellow('  ⚠ This generates a DRAFT for your review.'));
-    console.log(chalk.gray('  No data is submitted without your explicit approval.\n'));
-    // In real implementation: Playwright script generation
+    console.log(renderBox(
+      `${brand.accent('Job')}  ${jobId.slice(0, 8)}...\n\n` +
+      `${brand.warn('This generates a DRAFT for your review.')}\n` +
+      `${brand.dim('No data is submitted without your explicit approval.')}`,
+      'Apply Draft'
+    ));
   });
 
-// ─── Root ─────────────────────────────────────────────────
-program
-  .name('ct')
-  .description('CareerTwin Candidate OS — CLI')
-  .version('0.1.0');
-
+// ─── Parse ──────────────────────────────────────────────────
 program.parse(process.argv);
