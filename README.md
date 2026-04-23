@@ -1,153 +1,75 @@
 # CareerTwin Candidate OS
 
-A developer-first, CLI-native candidate operating system.
+CareerTwin Candidate OS is a local-first, developer-native operating system for managing career artifacts, tracking job applications, and publishing decision packets to the CareerTwin founder marketplace. 
 
-Ingest your profile. Structure your artifacts. Evaluate opportunities. Generate ATS-safe LaTeX resumes. Track your pipeline. Build your Passport. Go live into the CareerTwin marketplace.
+Built as a strict CLI-first ecosystem, your data lives securely on your local file system within the `.careertwin/` directory.
 
----
+> **Note:** The Web UI (`apps/web`) is strictly a secondary, read-only inspector and onboarding surface. The CLI and local filesystem remain the primary product foundation.
 
-## Quick Start
+## 🚀 Quick Start & Smoke Test
+
+Get the Candidate OS running on your machine and run your first smoke test in under 2 minutes.
+
+### 1. Installation & Build
 
 ```bash
-# Install dependencies
+# Clone the repository
+git clone https://github.com/headwayos/CareerTWiN-candidateOS.git
+cd CareerTWiN-candidateOS
+
+# Install monorepo dependencies
 npm install
 
-# Initialize your workspace
+# Build all workspaces in dependency order
+npm run build --workspaces --if-present
+
+# Link the CLI globally so you can use the 'ct' command anywhere
+cd apps/cli
+npm link
+cd ../..
+```
+
+### 2. First-Run Smoke Test
+
+Now that the CLI is linked, initialize your first Candidate OS environment and check its health.
+
+```bash
+# Initialize the local OS environment (creates .careertwin/)
 ct init
 
-# Check your environment
+# Run the system doctor to verify environment health
 ct doctor
-
-# Import your CV
-ct cv import path/to/resume.txt
-
-# View your profile
-ct profile show
-
-# Evaluate a job
-ct evaluate path/to/jd.txt
-
-# Build your resume
-ct resume build --mode ats
-
-# Build your Passport
-ct passport build
-
-# Preview before publishing
-ct passport preview
 ```
 
----
-
-## Command Surface
-
-| Command                     | Description                                      |
-|-----------------------------|--------------------------------------------------|
-| `ct init`                   | Bootstrap the `.careertwin/` workspace            |
-| `ct doctor`                 | Validate environment (LaTeX, Config, Node.js)     |
-| `ct config edit`            | Open config in default editor                     |
-| `ct profile show`           | Display structured candidate profile              |
-| `ct profile ingest`         | Interactively ingest profile data                 |
-| `ct cv import <file>`       | Import existing CV                                |
-| `ct evaluate <url\|file>`   | Run Job Evaluation and Gap Analysis               |
-| `ct tailor <job_id>`        | Generate tailored resume content                  |
-| `ct resume build`           | Compile LaTeX artifacts (ATS or Startup)          |
-| `ct artifacts list`         | List all generated artifacts                      |
-| `ct passport build`         | Generate/update the structured Passport           |
-| `ct passport preview`       | Local HTML/PDF preview of the Passport            |
-| `ct passport publish`       | Sync Passport to CareerTwin marketplace           |
-| `ct passport unpublish`     | Remove Passport from marketplace                  |
-| `ct tracker list`           | Show current application pipeline                 |
-| `ct tracker update <id>`    | Update status of a tracked application            |
-| `ct scan`                   | Search for opportunities                          |
-| `ct apply draft <job_id>`   | Generate browser automation script for review     |
+If everything is set up correctly, `ct doctor` will output green checks for Node.js, the `.careertwin/` directory, and your configuration file.
 
 ---
 
-## Architecture
+## 🛠 Troubleshooting
 
-```
-CLI / AI-IDE Adapter
-        │
-        ▼
-  CareerTwin Engine
-        │
-        ├── WorkspaceManager   (.careertwin/ filesystem)
-        ├── IngestionEngine    (profile + CV parsing)
-        ├── EvaluationEngine   (JD analysis + fit scoring)
-        ├── TrackerEngine      (application pipeline)
-        ├── EvidenceEngine     (GitHub extraction)
-        ├── ScannerEngine      (opportunity discovery)
-        ├── DocumentEngine     (LaTeX resume compilation)
-        └── PassportBuilder    (marketplace identity)
-```
+**Error: `zsh: command not found: ct`**
+* **Cause**: The `npm link` step did not place the executable in your system's PATH.
+* **Fix**: Ensure your npm global bin directory is in your PATH (`export PATH="$(npm config get prefix)/bin:$PATH"`), or run the CLI via `npx ct` from the project root. Alternatively, re-run `chmod +x apps/cli/dist/index.js` followed by `npm link` inside the `apps/cli` directory.
+
+**Error: `Cannot find module '@careertwin/engine'`**
+* **Cause**: Workspaces were not built in the correct dependency order.
+* **Fix**: Ensure you run `npm run build --workspaces --if-present` from the monorepo root to populate the `dist/` directories of all internal packages.
+
+**Error: `MISSING_API_KEY` during evaluation**
+* **Cause**: You are attempting to run an OpenAI-powered command (`ct evaluate`, `ct tailor`, `ct cv import`) without configuring your API key.
+* **Fix**: Provide your OpenAI key via the environment (`export OPENAI_API_KEY="sk-..."`) or configure it permanently in `.careertwin/config.json`.
 
 ---
 
-## Local Workspace (`.careertwin/`)
+## 🤖 Assistant Adapters
 
-```
-.careertwin/
-├── config.json
-├── manifest.json
-├── profile/
-│   ├── candidate.json
-│   ├── preferences.json
-│   └── evidence.json
-├── artifacts/
-│   ├── resumes/
-│   ├── passports/
-│   ├── reports/
-│   └── cover-letters/
-├── jobs/
-│   ├── postings/
-│   └── evaluations/
-├── tracker/
-│   └── applications.json
-├── logs/
-└── cache/
-```
+The Candidate OS is designed to be operated autonomously by AI IDEs. 
+The current primary integration is the **Antigravity Adapter**, which uses OpenAI Structured Outputs to strictly enforce our Zod schemas during ingestion and tailoring.
 
----
+Other AI IDEs, such as **Claude Code**, can operate the system via the CLI immediately and can be seamlessly upgraded to native adapters using the shared `AssistantAdapter` Contract.
 
-## Domain Mode Packs
+## 📚 Documentation Reference
 
-Opinionated configurations for different engineering domains:
-
-- **Backend** — System design, API contracts, databases
-- **DevOps** — Infrastructure, CI/CD, containers
-- **Full Stack** — End-to-end product ownership
-- **Frontend** — UI frameworks, accessibility, design systems
-- **Data** — Pipelines, warehousing, SQL
-- **AI / ML** — Modeling, MLOps, deployment
-- **Mobile** — iOS, Android, React Native, Flutter
-- **SRE** — Reliability, incident response, SLOs
-- **Startup Generalist** — Breadth, shipping speed, product sense
-
----
-
-## Passport Trust Boundaries
-
-| Level      | Data                                      |
-|------------|-------------------------------------------|
-| Private    | Compensation, internal notes, raw evidence|
-| Founder    | Fit scores, detailed proof, contact info  |
-| Public     | Role tags, high-level summary, skills     |
-
----
-
-## Tech Stack
-
-- **TypeScript** — All packages
-- **Zod** — Schema validation
-- **Commander** — CLI framework
-- **Handlebars** — LaTeX templating
-- **Tectonic** — Deterministic LaTeX compilation
-- **Next.js + Tailwind** — Web inspector (secondary surface)
-- **fs-extra** — Local filesystem operations
-
----
-
-## License
-
-MIT
+- **[CLI Reference](docs/CLI_REFERENCE.md)**: Full command list and examples.
+- **[Passport Trust Boundaries](docs/PASSPORT.md)**: Details on the Decision Packet and data visibility.
+- **[Contributing Guide](CONTRIBUTING.md)**: OSS guidelines and setup instructions.
