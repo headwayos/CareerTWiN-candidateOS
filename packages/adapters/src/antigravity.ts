@@ -4,7 +4,7 @@ import {
   IngestionEngine 
 } from '@careertwin/engine';
 import { DocumentEngine } from '@careertwin/document-engine';
-import { EvaluationRunSchema } from '@careertwin/schemas';
+import { EvaluationRunSchema, CandidateProfileSchema } from '@careertwin/schemas';
 import OpenAI from 'openai';
 import { zodToJsonSchema } from 'zod-to-json-schema';
 import path from 'path';
@@ -49,10 +49,33 @@ export class AntigravityAdapter implements AssistantAdapter {
   profile = {
     show: async () => this.ingestion.loadProfile(),
     ingest: async (text: string) => {
-      await this.ingestion.importCV(text);
+      const schema = zodToJsonSchema(CandidateProfileSchema as any, "CandidateProfile");
+      const response = await this.openai.chat.completions.create({
+        model: "gpt-4o",
+        response_format: { type: "json_object" },
+        messages: [
+          {
+            role: "system",
+            content: `You are an expert parsing engine. Convert the raw resume text into the strictly structured CandidateProfile JSON format.`
+          },
+          {
+            role: "user",
+            content: `RAW TEXT:\n${text}\n\nJSON SCHEMA:\n${JSON.stringify(schema)}`
+          }
+        ]
+      });
+      const content = response.choices[0].message.content;
+      if (!content) throw new Error("No content returned from OpenAI");
+      
+      const parsed = JSON.parse(content);
+      // Ensure we have an ID
+      if (!parsed.id) parsed.id = crypto.randomUUID();
+      
+      await this.ingestion.saveProfile(parsed);
     },
     importCV: async (filePath: string) => {
-      // Logic to read file and pass to ingest
+      // In a real implementation this would extract text from PDF using pdf-parse etc.
+      throw new Error("Direct file parsing not implemented. Use 'ct cv import <text>' instead.");
     }
   };
 
@@ -93,7 +116,39 @@ export class AntigravityAdapter implements AssistantAdapter {
   }
 
   async tailor(jobId: string): Promise<any> {
-    throw new Error('Not implemented');
+    const profile = await this.ingestion.loadProfile();
+    if (!profile) throw new Error('Cannot tailor resume: No profile found.');
+
+    const response = await this.openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        {
+          role: "system",
+          content: `You are an expert technical resume writer. Your task is to rewrite the candidate's experience bullets using the STAR methodology (Situation, Task, Action, Result) to maximize impact. 
+          Respond ONLY with a JSON object that contains the exact updated 'experience' array, replacing the old highlights with new highly-impactful ones.`
+        },
+        {
+          role: "user",
+          content: `CURRENT PROFILE:\n${JSON.stringify(profile.experience, null, 2)}`
+        }
+      ],
+      response_format: { type: "json_object" }
+    });
+
+    const content = response.choices[0].message.content;
+    if (!content) throw new Error("No content returned from OpenAI");
+
+    const tailoredExperience = JSON.parse(content).experience;
+    
+    // Save a tailored version
+    profile.experience = tailoredExperience;
+    const tailoredPath = this.workspace.getPath(`artifacts/resumes/candidate-tailored-${Date.now()}.json`);
+    
+    // Using engine workspace helper
+    const fs = require('fs-extra');
+    await fs.writeJson(tailoredPath, profile, { spaces: 2 });
+    
+    return { success: true, path: tailoredPath };
   }
 
   resume = {
