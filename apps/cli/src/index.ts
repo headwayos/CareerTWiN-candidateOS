@@ -71,7 +71,11 @@ const evaluation = new EvaluationEngine(workspace, gateway);
 const tracker = new TrackerEngine(workspace);
 const evidence = new EvidenceEngine(workspace);
 const scanner = new ScannerEngine(workspace);
-const documents = new DocumentEngine(path.join(__dirname, '../../packages/document-engine/templates'));
+const documents = new DocumentEngine(
+  fs.existsSync(path.join(cwd, 'packages/document-engine/templates'))
+    ? path.join(cwd, 'packages/document-engine/templates')
+    : path.join(__dirname, '../../packages/document-engine/templates')
+);
 const passport = new PassportBuilder(workspace);
 
 // ─── Root Config ─────────────────────────────────────────────
@@ -133,8 +137,16 @@ program
     // Provider Readiness (generic)
     const readiness = await gateway.checkReadiness();
     lines.push(statusLine(readiness.hasCredentials, `Provider (${readiness.provider})`, readiness.hasCredentials ? 'Credentials present' : 'Not configured'));
+    if (readiness.baseUrl) {
+      lines.push(statusLine(true, 'Base URL', readiness.baseUrl));
+    }
     lines.push(statusLine(readiness.ready, 'Model', readiness.configuredModel));
     lines.push(statusLine(readiness.supportsStructuredOutput, 'Structured output', readiness.supportsStructuredOutput ? 'Supported' : 'Not available'));
+    if (readiness.errors.length > 0) {
+      for (const err of readiness.errors) {
+        lines.push(`  ${brand.error('✗')}  ${brand.error(err)}`);
+      }
+    }
 
     // LaTeX
     let latexOk = false;
@@ -480,21 +492,37 @@ passportCmd
 passportCmd
   .command('publish')
   .description('Sync Passport to CareerTwin marketplace')
-  .action(async () => {
-    const passportPath = workspace.getPath('artifacts/passports/passport.json');
-    if (!(await fs.pathExists(passportPath))) {
-      console.log(brand.error('\n  No passport found. Run "npm run ct -- passport build" first.\n'));
-      return;
+  .option('--confirm', 'Skip confirmation prompt')
+  .action(async (opts: { confirm?: boolean }) => {
+    const spinner = ora({ text: brand.dim('Preparing to publish...'), spinner: 'dots' }).start();
+    try {
+      const state = await passport.getPublishState();
+      const { publicPayload, founderPayload } = await passport.publish();
+      spinner.succeed(brand.success('Passport published'));
+
+      // Show what was sent
+      if (Table) {
+        const table = new Table({
+          head: ['Boundary', 'Fields Sent'].map(h => brand.accent(h)),
+          chars: { 'mid': '', 'left-mid': '', 'mid-mid': '', 'right-mid': '' },
+          style: { head: [], border: ['cyan'] },
+        });
+        table.push(
+          [brand.success('Public'), Object.keys(publicPayload).join(', ')],
+          [brand.warn('Founder'), Object.keys(founderPayload).join(', ')],
+          [brand.error('Private'), 'NOT SENT — stays local'],
+        );
+        console.log('\n' + table.toString());
+      }
+
+      console.log(renderBox(
+        `${brand.success('Passport is now LIVE on the marketplace.')}\n\n` +
+        `${brand.dim('Run "npm run ct -- passport unpublish" to revoke visibility.')}`,
+        'Published'
+      ));
+    } catch (error: any) {
+      spinner.fail(brand.error(error.message));
     }
-    console.log(renderBox(
-      `${brand.warn('This will make your Passport visible to approved founders.')}\n\n` +
-      `${brand.accent('Private')}   Compensation, internal notes    ${brand.dim('(stays local)')}\n` +
-      `${brand.accent('Founder')}   Fit scores, proof, contact      ${brand.dim('(gated access)')}\n` +
-      `${brand.accent('Public')}    Role tags, summary, skills      ${brand.dim('(marketplace)')}\n\n` +
-      `${brand.dim('Run "npm run ct -- passport unpublish" to reverse.')}`,
-      'Publish Confirmation'
-    ));
-    // In real implementation: confirmation prompt + API call
   });
 
 // ─── ct passport unpublish ──────────────────────────────────
@@ -502,10 +530,18 @@ passportCmd
   .command('unpublish')
   .description('Remove Passport from the marketplace')
   .action(async () => {
-    console.log(renderBox(
-      brand.success('Passport set to private. Removed from marketplace.'),
-      'Unpublished'
-    ));
+    const spinner = ora({ text: brand.dim('Unpublishing...'), spinner: 'dots' }).start();
+    try {
+      await passport.unpublish();
+      spinner.succeed(brand.success('Passport unpublished'));
+      console.log(renderBox(
+        `${brand.success('Passport removed from marketplace.')}\n` +
+        `${brand.dim('Your local data remains intact in .careertwin/.')}`,
+        'Unpublished'
+      ));
+    } catch (error: any) {
+      spinner.fail(brand.error(error.message));
+    }
   });
 
 // ─── ct tracker list ────────────────────────────────────────

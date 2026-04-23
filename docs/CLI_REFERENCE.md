@@ -2,104 +2,205 @@
 
 The `ct` command-line interface is the primary mechanism for interacting with the Candidate OS.
 
-## Environment Initialization
+All commands are invoked via `npm run ct -- <command>` from the repo root.
+
+---
+
+## Environment & Setup
 
 ### `ct init`
-Initializes a new `.careertwin/` hidden workspace in your current directory. This acts as the local database and filesystem for all your career artifacts.
+Scaffolds the `.careertwin/` workspace directory with config, profile, artifacts, tracker, and cache subdirectories.
 ```bash
-$ ct init
+$ npm run ct -- init
 ✔ .careertwin/ workspace initialized
 ```
+Idempotent — safe to run multiple times. Existing data is preserved.
 
 ### `ct doctor`
-Runs a health check on the Candidate OS, validating your configuration, Node.js version, and LaTeX compiler availability.
+Validates environment health: Node.js, workspace, writable permissions, provider readiness, Tectonic, and profile status.
 ```bash
-$ ct doctor
-  ✓ Node.js: v20.19.4
-  ✓ .careertwin/: Found
+$ npm run ct -- doctor
+```
+Provider readiness checks are generic — supports OpenAI, Anthropic, OpenRouter, and local endpoints.
+
+### `ct --version`
+Prints the current CLI version. Use this to confirm you are running the built binary, not a stale global install.
+```bash
+$ npm run ct -- --version
+0.1.0
+```
+
+### `ct config edit`
+Opens `.careertwin/config.json` in your default `$EDITOR`.
+```bash
+$ npm run ct -- config edit
 ```
 
 ---
 
 ## Intelligence & Profiles
 
-### `ct cv import <raw_text_string>`
-Invokes the Assistant Adapter (e.g., OpenAI) to parse raw, unstructured CV text into the strictly typed `CandidateProfile` JSON schema.
+### `ct cv import <file>`
+Reads a text file and sends it to the configured provider for structured parsing into a `CandidateProfile`.
 ```bash
-$ ct cv import "Full Stack Developer with 5 years experience in..."
-✔ Profile parsed and saved to .careertwin/profile/candidate.json
+# Live mode (requires provider)
+$ npm run ct -- cv import my-resume.txt
+
+# Demo mode (no provider needed)
+$ npm run ct -- cv import my-resume.txt --mock
 ```
+The `--mock` flag generates a clearly labeled demo profile. Without `--mock`, a missing provider will fail loudly with setup instructions.
 
 ### `ct profile show`
-Displays the currently active candidate profile JSON payload.
+Displays the active candidate profile with name, skills, summary, and experience.
 ```bash
-$ ct profile show
+$ npm run ct -- profile show
 ```
 
-### `ct evaluate <job_description>`
-Evaluates the currently ingested Candidate Profile against a raw job description using OpenAI Structured Outputs to provide a gap analysis and fit score.
-```bash
-$ ct evaluate "Looking for a Senior React Engineer..."
-✔ Evaluation complete: Fit Score 85%
-```
+### `ct profile ingest`
+Prints instructions for importing a profile. Directs to `ct cv import`.
 
-### `ct tailor --mode <domain_pack>`
-Dynamically tailors your experience bullets using the STAR methodology (Situation, Task, Action, Result) based on the provided domain mode pack (e.g., `startup`, `backend`, `sre`).
+---
+
+## Evaluation & Tailoring
+
+### `ct evaluate <source>`
+Evaluates the active profile against a job description (file path or URL).
 ```bash
-$ ct tailor --mode startup
-✔ Bullets rewritten for maximum founder impact.
+# Live evaluation
+$ npm run ct -- evaluate job-description.txt
+
+# Demo mode
+$ npm run ct -- evaluate job-description.txt --mock
+```
+Outputs a score table (Overall, Skills, Experience, Startup Fit) and a detailed gap analysis.
+
+### `ct tailor <jobId>`
+Rewrites resume bullets using the STAR methodology for a specific job. Requires a configured provider.
+```bash
+$ npm run ct -- tailor abc123
 ```
 
 ---
 
-## Document Generation
+## Document Engine
 
-### `ct resume build --mode <ats|startup>`
-Compiles your JSON profile into a high-precision, Tectonic-ready LaTeX document.
+### `ct resume build`
+Compiles the active profile into a LaTeX document using ATS-safe or startup templates.
 ```bash
-$ ct resume build --mode ats
-✔ Resume built: .careertwin/artifacts/resumes/resume-ats-safe-1234.pdf
+$ npm run ct -- resume build --mode ats
+$ npm run ct -- resume build --mode startup
 ```
+If Tectonic is installed, a PDF is compiled. If not, the `.tex` source is preserved and the error message is actionable.
 
 ---
 
 ## Artifacts & Tracking
 
 ### `ct artifacts list`
-Lists all artifacts (PDFs, JSON passports, tailored profiles) currently stored in your local OS workspace.
+Lists all generated artifacts (PDFs, passports, reports) from the manifest.
 ```bash
-$ ct artifacts list
+$ npm run ct -- artifacts list
 ```
 
-### `ct tracker add <company> <role>`
-Adds a new job application to your local Kanban-style tracker.
+### `ct tracker list`
+Displays the application pipeline as a compact table.
 ```bash
-$ ct tracker add "Stripe" "Backend Engineer"
-✔ Added Stripe (Backend Engineer) to Tracker.
+$ npm run ct -- tracker list
 ```
 
-### `ct tracker board`
-Displays a summary of your application pipeline directly in the terminal.
+### `ct tracker update <id> <status>`
+Updates the status of a tracked application.
 ```bash
-$ ct tracker board
+$ npm run ct -- tracker update abc123 "interview"
 ```
 
 ---
 
-## Marketplace Publishing
+## Passport & Marketplace
 
 ### `ct passport build`
-Generates your Decision Packet based on the `PassportSchema`, filtering sensitive data based on Trust Boundaries.
+Generates the Decision Packet and computes a readiness score.
 ```bash
-$ ct passport build
-✔ Passport generated at .careertwin/artifacts/passports/passport.json
+$ npm run ct -- passport build
 ```
 
 ### `ct passport preview`
-Previews the metadata and tags of your generated Passport.
+Shows the passport with trust-boundary visibility grouping (Public / Founder / Private).
+```bash
+$ npm run ct -- passport preview
+```
 
 ### `ct passport publish`
-Syncs your local Passport JSON with the live CareerTwin Founder Marketplace via the secure API bridge.
+Publishes the passport to the CareerTwin marketplace. Only fields within the Public and Founder trust boundaries are sent. Private data stays local.
+```bash
+$ npm run ct -- passport publish
+$ npm run ct -- passport publish --confirm
+```
+Persists publish state to `.careertwin/artifacts/passports/publish-state.json`.
 
 ### `ct passport unpublish`
-Revokes your Passport from the live marketplace and immediately removes founder visibility.
+Revokes marketplace visibility immediately. Local data remains intact.
+```bash
+$ npm run ct -- passport unpublish
+```
+
+---
+
+## Scanning & Automation
+
+### `ct scan`
+Searches for matching opportunities based on profile preferences.
+```bash
+$ npm run ct -- scan
+```
+
+### `ct apply draft <jobId>`
+Generates a browser automation draft for human review. No data is submitted without explicit approval.
+```bash
+$ npm run ct -- apply draft abc123
+```
+
+---
+
+## Provider Configuration
+
+The Candidate OS uses a generic `ModelGateway` that auto-detects providers from environment variables:
+
+| Provider | Environment Variable | Default Model |
+|---|---|---|
+| OpenAI | `OPENAI_API_KEY` | `gpt-4o` |
+| Anthropic | `ANTHROPIC_API_KEY` | `claude-sonnet-4-20250514` |
+| OpenRouter | `OPENROUTER_API_KEY` | `openai/gpt-4o` |
+| Local (Ollama/LM Studio) | `CT_LOCAL_URL` | `llama3` |
+
+Override the model with `CT_MODEL`:
+```bash
+export CT_MODEL="gpt-4o-mini"
+```
+
+For local endpoints:
+```bash
+export CT_LOCAL_URL="http://localhost:11434/v1"
+export CT_LOCAL_API_KEY="local"   # optional
+export CT_MODEL="llama3"
+```
+
+---
+
+## LaTeX / Tectonic Setup
+
+Install Tectonic for PDF compilation from `.tex` sources:
+
+```bash
+# macOS
+brew install tectonic
+
+# Linux
+curl --proto '=https' --tlsv1.2 -fsSL https://drop-sh.fullyjustified.net | sh
+
+# Verify
+tectonic --version
+```
+
+If Tectonic is not installed, `ct resume build` will still generate the `.tex` source file. Only the PDF compilation step is skipped, and the error message tells you exactly how to install it.

@@ -21,14 +21,14 @@ export interface AssistantAdapter {
     ingest(text: string): Promise<void>;
     importCV(filePath: string): Promise<void>;
   };
-  evaluate(jobSource: string): Promise<EvaluationRun>;
-  tailor(jobId: string): Promise<{ texSource: string; plan: string }>;
+  evaluate(jobSource: string): Promise<any>;
+  tailor(jobId: string): Promise<any>;
   resume: {
-    build(mode: 'ats' | 'startup', jobId?: string): Promise<string>;
+    build(mode: 'ats' | 'startup', jobId?: string): Promise<any>;
   };
   passport: {
-    build(): Promise<Passport>;
-    publish(): Promise<void>;
+    build(): Promise<any>;
+    publish(): Promise<any>;
     unpublish(): Promise<void>;
   };
   tracker: {
