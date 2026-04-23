@@ -4,6 +4,9 @@
   "bin": {
     "ct": "./dist/index.js"
   },
+  "scripts": {
+    "build": "tsc"
+  },
   "dependencies": {
     "@careertwin/engine": "*",
     "@careertwin/schemas": "*",

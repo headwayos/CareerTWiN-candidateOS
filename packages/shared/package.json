@@ -1,8 +1,8 @@
 {
   "name": "@careertwin/shared",
   "version": "0.1.0",
-  "main": "src/modes/index.ts",
-  "types": "src/modes/index.ts",
+  "main": "dist/modes/index.js",
+  "types": "dist/modes/index.d.ts",
   "scripts": {
     "build": "tsc"
   },
