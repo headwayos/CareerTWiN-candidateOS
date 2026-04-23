@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.careertwin/
+*.pdf
+*.log
+.next/
+.turbo/
+.env
+.env.local

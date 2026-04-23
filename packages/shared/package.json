@@ -1,0 +1,12 @@
+{
+  "name": "@careertwin/shared",
+  "version": "0.1.0",
+  "main": "src/modes/index.ts",
+  "types": "src/modes/index.ts",
+  "scripts": {
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@careertwin/schemas": "*"
+  }
+}

@@ -1,0 +1,48 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=1in]{geometry}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{hyperref}
+
+\titleformat{\section}{\large\bfseries}{}{0em}{}[\titlerule]
+\titlespacing{\section}{0pt}{12pt}{6pt}
+
+\begin{document}
+
+\begin{center}
+    {\huge \bfseries {{bio.name}}} \\
+    {{#if bio.location}}{{bio.location}} | {{/if}} {{bio.email}} \\
+    {{#if bio.links.github}} \href{ {{bio.links.github}} }{GitHub} | {{/if}}
+    {{#if bio.links.linkedin}} \href{ {{bio.links.linkedin}} }{LinkedIn} | {{/if}}
+    {{#if bio.links.portfolio}} \href{ {{bio.links.portfolio}} }{Portfolio} {{/if}}
+\end{center}
+
+\section*{Summary}
+{{bio.summary}}
+
+\section*{Experience}
+{{#each experience}}
+\noindent {\bfseries {{company}}} \hfill {{startDate}} -- {{#if current}}Present{{else}}{{endDate}}{{/if}} \\
+{\itshape {{role}}} \\
+\begin{itemize}[noitemsep,topsep=0pt]
+    {{#each highlights}}
+    \item {{this}}
+    {{/each}}
+\end{itemize}
+\vspace{6pt}
+{{/each}}
+
+\section*{Skills}
+{{#each skills}}
+{{this}}{{#unless @last}}, {{/unless}}
+{{/each}}
+
+\section*{Education}
+{{#each education}}
+\noindent {\bfseries {{institution}}} \hfill {{startDate}} -- {{endDate}} \\
+{{degree}}{{#if field}} in {{field}}{{/if}} \\
+\vspace{6pt}
+{{/each}}
+
+\end{document}

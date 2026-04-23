@@ -1,0 +1,14 @@
+{
+  "name": "@careertwin/adapters",
+  "version": "0.1.0",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@careertwin/engine": "*",
+    "@careertwin/schemas": "*",
+    "@careertwin/document-engine": "*"
+  }
+}

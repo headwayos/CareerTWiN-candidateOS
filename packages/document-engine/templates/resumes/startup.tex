@@ -1,0 +1,66 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=0.8in]{geometry}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\usepackage{xcolor}
+
+\definecolor{accent}{HTML}{0369A1}
+\definecolor{muted}{HTML}{64748B}
+
+\hypersetup{colorlinks=true,linkcolor=accent,urlcolor=accent}
+
+\titleformat{\section}{\large\bfseries\color{accent}}{}{0em}{}[\color{accent}\titlerule]
+\titlespacing{\section}{0pt}{14pt}{6pt}
+
+\begin{document}
+
+\begin{center}
+    {\Huge \bfseries {{bio.name}}} \\[6pt]
+    {\color{muted} {{#if bio.location}}{{bio.location}} $\cdot$ {{/if}} {{bio.email}}} \\[4pt]
+    {{#if bio.links.github}} \href{ {{bio.links.github}} }{GitHub} {{/if}}
+    {{#if bio.links.linkedin}} $\cdot$ \href{ {{bio.links.linkedin}} }{LinkedIn} {{/if}}
+    {{#if bio.links.portfolio}} $\cdot$ \href{ {{bio.links.portfolio}} }{Portfolio} {{/if}}
+\end{center}
+
+\vspace{4pt}
+
+\section*{About}
+{{bio.summary}}
+
+\section*{What I Bring to a Startup}
+\begin{itemize}[noitemsep,topsep=0pt]
+    \item Full ownership of technical decisions and execution
+    \item Bias toward shipping fast with production-grade quality
+    \item Comfort with ambiguity, changing priorities, and wearing multiple hats
+\end{itemize}
+
+\section*{Experience}
+{{#each experience}}
+\noindent {\bfseries {{company}}} \hfill {\color{muted} {{startDate}} -- {{#if current}}Present{{else}}{{endDate}}{{/if}}} \\
+{\itshape {{role}}} \\
+\begin{itemize}[noitemsep,topsep=0pt]
+    {{#each highlights}}
+    \item {{this}}
+    {{/each}}
+\end{itemize}
+{{#if stack}}
+{\small \color{muted} Stack: {{#each stack}}{{this}}{{#unless @last}}, {{/unless}}{{/each}} }
+{{/if}}
+\vspace{8pt}
+{{/each}}
+
+\section*{Technical Skills}
+{{#each skills}}
+{{this}}{{#unless @last}} $\cdot$ {{/unless}}
+{{/each}}
+
+\section*{Education}
+{{#each education}}
+\noindent {\bfseries {{institution}}} \hfill {\color{muted} {{startDate}} -- {{endDate}}} \\
+{{degree}}{{#if field}} in {{field}}{{/if}} \\
+\vspace{4pt}
+{{/each}}
+
+\end{document}

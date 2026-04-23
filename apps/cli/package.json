@@ -1,0 +1,14 @@
+{
+  "name": "@careertwin/cli",
+  "version": "0.1.0",
+  "bin": {
+    "ct": "./dist/index.js"
+  },
+  "dependencies": {
+    "@careertwin/engine": "*",
+    "@careertwin/schemas": "*",
+    "commander": "^11.1.0",
+    "chalk": "^4.1.2",
+    "ora": "^5.4.1"
+  }
+}

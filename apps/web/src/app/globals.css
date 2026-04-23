@@ -1,0 +1,24 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --primary: #0369A1;
+  --secondary: #0EA5E9;
+  --accent: #22C55E;
+  --background: #F0F9FF;
+  --foreground: #0C4A6E;
+}
+
+@layer base {
+  body {
+    @apply bg-[#F0F9FF] text-[#0C4A6E];
+  }
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-mono font-bold;
+  }
+}
+
+.glass-card {
+  @apply bg-white/80 backdrop-blur-md border border-sky-100 rounded-lg shadow-sm;
+}
