@@ -17,11 +17,11 @@
 \begin{document}
 
 \begin{center}
-    {\Huge \bfseries {{bio.name}}} \\[6pt]
-    {\color{muted} {{#if bio.location}}{{bio.location}} $\cdot$ {{/if}} {{bio.email}}} \\[4pt]
-    {{#if bio.links.github}} \href{ {{bio.links.github}} }{GitHub} {{/if}}
-    {{#if bio.links.linkedin}} $\cdot$ \href{ {{bio.links.linkedin}} }{LinkedIn} {{/if}}
-    {{#if bio.links.portfolio}} $\cdot$ \href{ {{bio.links.portfolio}} }{Portfolio} {{/if}}
+    {\Huge \bfseries {{ bio.name }} } \\[6pt]
+    {\color{muted} {{#if bio.location}}{{ bio.location }} $\cdot$ {{/if}} {{ bio.email }} } \\[4pt]
+    {{#if bio.links.github}} \href{ {{ bio.links.github }} }{GitHub} {{/if}}
+    {{#if bio.links.linkedin}} $\cdot$ \href{ {{ bio.links.linkedin }} }{LinkedIn} {{/if}}
+    {{#if bio.links.portfolio}} $\cdot$ \href{ {{ bio.links.portfolio }} }{Portfolio} {{/if}}
 \end{center}
 
 \vspace{4pt}
@@ -38,11 +38,11 @@
 
 \section*{Experience}
 {{#each experience}}
-\noindent {\bfseries {{company}}} \hfill {\color{muted} {{startDate}} -- {{#if current}}Present{{else}}{{endDate}}{{/if}}} \\
-{\itshape {{role}}} \\
+\noindent {\bfseries {{ company }} } \hfill {\color{muted} {{ startDate }} -- {{#if current}}Present{{else}}{{ endDate }}{{/if}}} \\
+{\itshape {{ role }} } \\
 \begin{itemize}[noitemsep,topsep=0pt]
     {{#each highlights}}
-    \item {{this}}
+    \item {{ this }}
     {{/each}}
 \end{itemize}
 {{#if stack}}
@@ -58,8 +58,8 @@
 
 \section*{Education}
 {{#each education}}
-\noindent {\bfseries {{institution}}} \hfill {\color{muted} {{startDate}} -- {{endDate}}} \\
-{{degree}}{{#if field}} in {{field}}{{/if}} \\
+\noindent {\bfseries {{ institution }} } \hfill {\color{muted} {{ startDate }} -- {{ endDate }}} \\
+{{ degree }}{{#if field}} in {{ field }}{{/if}} \\
 \vspace{4pt}
 {{/each}}
 

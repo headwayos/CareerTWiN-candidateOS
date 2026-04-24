@@ -40,14 +40,20 @@ export class EvaluationEngine {
     }
 
     const parsed = await this.gateway.generateStructured<EvaluationRun>(
-      `You are an expert technical recruiter and career strategist. Evaluate the candidate profile against the job description. Provide detailed scores (overall, skills, experience, startupFit on a 0-100 scale), gap analysis (matches, gaps, risks), a recommendation, actionable fixes, and a seniority signal (junior/mid/senior/staff/principal). Output strictly as JSON matching the schema.`,
-      `CANDIDATE PROFILE:\n${JSON.stringify(profile, null, 2)}\n\nJOB DESCRIPTION:\n${jdText}`,
+      `You are an expert technical recruiter. Evaluate the candidate against the job.
+      Return a JSON object with EXACTLY these keys:
+      - "scores": { "overall": 0-100, "skills": 0-100, "experience": 0-100, "startupFit": 0-100 }
+      - "analysis": { "matches": [], "gaps": [], "risks": [], "recommendation": "...", "actionableFixes": [] }
+      - "senioritySignal": one of ["under-qualified", "entry", "mid", "senior", "staff", "over-qualified"]
+      
+      All fields are mandatory. Be objective.`,
+      `CANDIDATE:\n${JSON.stringify(profile)}\n\nJOB:\n${jdText}`,
       EvaluationRunSchema,
       'EvaluationRun'
     );
 
-    if (!parsed.jobId) (parsed as any).jobId = crypto.randomUUID();
-    if (!parsed.evaluatedAt) (parsed as any).evaluatedAt = new Date().toISOString();
+    (parsed as any).jobId = crypto.randomUUID();
+    (parsed as any).evaluatedAt = new Date().toISOString();
 
     const validated = EvaluationRunSchema.parse(parsed);
     await this.saveEvaluation(validated);

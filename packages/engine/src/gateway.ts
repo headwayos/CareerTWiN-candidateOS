@@ -114,9 +114,9 @@ export class ModelGateway {
   }
 
   async generateStructured<T>(
-    systemPrompt: string, 
-    userContent: string, 
-    zodSchema: any, 
+    systemPrompt: string,
+    userContent: string,
+    zodSchema: any,
     schemaName: string
   ): Promise<T> {
     if (!this.client) {
@@ -142,8 +142,8 @@ export class ModelGateway {
       response_format: { type: "json_object" },
       messages: [
         { role: "system", content: systemPrompt },
-        { 
-          role: "user", 
+        {
+          role: "user",
           content: `${userContent}\n\nJSON SCHEMA STRICT:\n${JSON.stringify(schema)}`
         }
       ]
@@ -152,6 +152,16 @@ export class ModelGateway {
     const content = response.choices[0].message.content;
     if (!content) throw new Error("No content returned from provider.");
 
-    return JSON.parse(content) as T;
+    let cleaned = content.trim();
+    if (cleaned.startsWith('```')) {
+      cleaned = cleaned.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '').trim();
+    }
+
+    try {
+      const parsed = JSON.parse(cleaned) as T;
+      return parsed;
+    } catch (e: any) {
+      throw new Error(`ModelGateway: Failed to parse JSON response: ${e.message}`);
+    }
   }
 }

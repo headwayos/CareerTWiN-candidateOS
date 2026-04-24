@@ -19,7 +19,8 @@ export class DocumentEngine {
     const templateContent = await fs.readFile(templatePath, 'utf-8');
     
     const template = Handlebars.compile(templateContent);
-    const texSource = template(profile);
+    const escapedProfile = this.escapeLatex(profile);
+    const texSource = template(escapedProfile);
 
     const tempDir = path.join(process.cwd(), 'cache', 'latex');
     await fs.ensureDir(tempDir);
@@ -42,5 +43,32 @@ export class DocumentEngine {
       await fs.writeFile(texOutputPath, texSource);
       throw new Error(`LaTeX compilation failed: ${error.message}`);
     }
+  }
+
+  private escapeLatex(data: any): any {
+    if (typeof data === 'string') {
+      return data
+        .replace(/\\/g, '\\textbackslash ')
+        .replace(/&/g, '\\&')
+        .replace(/%/g, '\\%')
+        .replace(/\$/g, '\\$')
+        .replace(/#/g, '\\#')
+        .replace(/_/g, '\\_')
+        .replace(/{/g, '\\{')
+        .replace(/}/g, '\\}')
+        .replace(/~/g, '\\textasciitilde ')
+        .replace(/\^/g, '\\textasciicircum ');
+    }
+    if (Array.isArray(data)) {
+      return data.map(i => this.escapeLatex(i));
+    }
+    if (typeof data === 'object' && data !== null) {
+      const res: any = {};
+      for (const key in data) {
+        res[key] = this.escapeLatex(data[key]);
+      }
+      return res;
+    }
+    return data;
   }
 }

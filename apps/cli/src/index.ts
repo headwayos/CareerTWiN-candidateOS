@@ -10,7 +10,8 @@ import {
   TrackerEngine, 
   EvidenceEngine, 
   ScannerEngine,
-  ModelGateway
+  ModelGateway,
+  TailorEngine
 } from '@careertwin/engine';
 import { DocumentEngine } from '@careertwin/document-engine';
 import { PassportBuilder } from '@careertwin/passport';
@@ -69,6 +70,7 @@ const gateway = new ModelGateway(workspace);
 const ingestion = new IngestionEngine(workspace, gateway);
 const evaluation = new EvaluationEngine(workspace, gateway);
 const tracker = new TrackerEngine(workspace);
+const tailor = new TailorEngine(workspace, gateway);
 const evidence = new EvidenceEngine(workspace);
 const scanner = new ScannerEngine(workspace);
 const documents = new DocumentEngine(
@@ -240,7 +242,7 @@ program
       }
 
       spinner.text = brand.dim('Reading file...');
-      const content = await fs.readFile(filePath, 'utf-8');
+      const content: string | Buffer = await fs.readFile(filePath);
 
       if (opts.mock) {
         spinner.text = brand.dim('Creating demo profile (--mock)...');
@@ -293,6 +295,15 @@ program
 
       spinner.succeed(brand.success('Evaluation complete'));
 
+      // Add to tracker
+      await tracker.add({
+        id: require('crypto').randomUUID(),
+        jobId: result.jobId,
+        status: 'evaluated',
+        lastUpdatedAt: new Date().toISOString(),
+        notes: [{ date: new Date().toISOString(), content: `Initial evaluation: Overall score ${result.scores.overall}/100` }],
+      } as any);
+
       // Score table
       if (Table) {
         const table = new Table({
@@ -344,9 +355,24 @@ program
         spinner.fail(brand.error('No profile found.'));
         return;
       }
+
+      // Load evaluation
+      const evalPath = workspace.getPath(`jobs/evaluations/${jobId}.json`);
+      if (!(await fs.pathExists(evalPath))) {
+        spinner.fail(brand.error(`No evaluation found for jobId: ${jobId}. Run evaluate first.`));
+        return;
+      }
+      const evaluationData = await fs.readJson(evalPath);
+
       spinner.text = brand.dim('Rewriting bullets with STAR methodology...');
-      // Tailoring logic through ModelGateway
-      spinner.warn(brand.warn('Tailoring requires a configured provider. Run "npm run ct -- doctor".'));
+      const tailoredProfile = await tailor.tailorProfile(profile, evaluationData);
+      const savedPath = await tailor.saveTailoredArtifact(tailoredProfile, jobId);
+
+      spinner.succeed(brand.success('Tailoring complete'));
+      console.log(renderBox(
+        `${brand.accent('Job ID')}  ${jobId.slice(0, 8)}...\n${brand.accent('Saved')}   ${brand.dim(savedPath)}`,
+        'Tailored Profile Generated'
+      ));
     } catch (error: any) {
       spinner.fail(brand.error(error.message));
     }

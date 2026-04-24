@@ -56,6 +56,11 @@ export class WorkspaceManager {
       };
       await fs.writeJson(manifestPath, defaultManifest, { spaces: 2 });
     }
+
+    const trackerPath = path.join(this.ctDir, 'tracker/applications.json');
+    if (!(await fs.pathExists(trackerPath))) {
+      await fs.writeJson(trackerPath, [], { spaces: 2 });
+    }
   }
 
   async getConfig(): Promise<LocalConfig> {

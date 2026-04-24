@@ -11,11 +11,11 @@
 \begin{document}
 
 \begin{center}
-    {\huge \bfseries {{bio.name}}} \\
-    {{#if bio.location}}{{bio.location}} | {{/if}} {{bio.email}} \\
-    {{#if bio.links.github}} \href{ {{bio.links.github}} }{GitHub} | {{/if}}
-    {{#if bio.links.linkedin}} \href{ {{bio.links.linkedin}} }{LinkedIn} | {{/if}}
-    {{#if bio.links.portfolio}} \href{ {{bio.links.portfolio}} }{Portfolio} {{/if}}
+    {\huge \bfseries {{ bio.name }} } \\
+    {{#if bio.location}}{{ bio.location }} | {{/if}} {{ bio.email }} \\
+    {{#if bio.links.github}} \href{ {{ bio.links.github }} }{GitHub} | {{/if}}
+    {{#if bio.links.linkedin}} \href{ {{ bio.links.linkedin }} }{LinkedIn} | {{/if}}
+    {{#if bio.links.portfolio}} \href{ {{ bio.links.portfolio }} }{Portfolio} {{/if}}
 \end{center}
 
 \section*{Summary}
@@ -23,11 +23,11 @@
 
 \section*{Experience}
 {{#each experience}}
-\noindent {\bfseries {{company}}} \hfill {{startDate}} -- {{#if current}}Present{{else}}{{endDate}}{{/if}} \\
-{\itshape {{role}}} \\
+\noindent {\bfseries {{ company }} } \hfill {{ startDate }} -- {{#if current}}Present{{else}}{{ endDate }}{{/if}} \\
+{\itshape {{ role }} } \\
 \begin{itemize}[noitemsep,topsep=0pt]
     {{#each highlights}}
-    \item {{this}}
+    \item {{ this }}
     {{/each}}
 \end{itemize}
 \vspace{6pt}
@@ -35,13 +35,13 @@
 
 \section*{Skills}
 {{#each skills}}
-{{this}}{{#unless @last}}, {{/unless}}
+{{ this }}{{#unless @last}}, {{/unless}}
 {{/each}}
 
 \section*{Education}
 {{#each education}}
-\noindent {\bfseries {{institution}}} \hfill {{startDate}} -- {{endDate}} \\
-{{degree}}{{#if field}} in {{field}}{{/if}} \\
+\noindent {\bfseries {{ institution }} } \hfill {{ startDate }} -- {{ endDate }} \\
+{{ degree }}{{#if field}} in {{ field }}{{/if}} \\
 \vspace{6pt}
 {{/each}}
 

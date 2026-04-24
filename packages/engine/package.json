@@ -9,8 +9,9 @@
   "dependencies": {
     "@careertwin/schemas": "*",
     "fs-extra": "^11.2.0",
-    "zod": "^3.22.4",
     "openai": "^4.86.1",
+    "pdf-parse": "^2.4.5",
+    "zod": "^3.22.4",
     "zod-to-json-schema": "^3.24.1"
   },
   "devDependencies": {

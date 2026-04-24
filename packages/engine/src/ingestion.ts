@@ -13,7 +13,23 @@ export class IngestionEngine {
     private gateway?: ModelGateway
   ) {}
 
-  async importCV(rawText: string, options?: { mock?: boolean }): Promise<CandidateProfile> {
+  async importCV(input: string | Buffer, options?: { mock?: boolean }): Promise<CandidateProfile> {
+    let rawText = '';
+    
+    if (Buffer.isBuffer(input)) {
+      try {
+        const { PDFParse } = require('pdf-parse');
+        const parser = new PDFParse({ data: input });
+        const data = await parser.getText();
+        await parser.destroy();
+        rawText = data.text;
+      } catch (error: any) {
+        throw new Error(`Failed to parse PDF: ${error.message}`);
+      }
+    } else {
+      rawText = input;
+    }
+
     if (options?.mock) {
       return this.importMockProfile();
     }
@@ -39,7 +55,13 @@ export class IngestionEngine {
     }
 
     const parsed = await this.gateway.generateStructured<CandidateProfile>(
-      `You are an expert resume parser. Convert the raw resume text into a strictly structured CandidateProfile JSON. Extract bio (name, email, phone, summary, links), experience (company, role, dates, highlights, stack), education (institution, degree, field, dates), and skills. Ensure the output is valid JSON matching the schema exactly.`,
+      `You are an expert resume parser. 
+      Convert the raw resume text into a strictly structured JSON object. 
+      The root object MUST contain the following keys: "bio", "experience", "education", "skills".
+      - "bio" MUST have "name", "email", "summary", and "links".
+      - "experience" and "education" should be arrays.
+      - "skills" should be an array of strings.
+      Extract all available information accurately.`,
       rawText,
       CandidateProfileSchema,
       'CandidateProfile'
