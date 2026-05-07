@@ -1,0 +1,61 @@
+{
+  "schemaVersion": "v2.1",
+  "updatedAt": "2026-05-04T12:00:00.000Z",
+  "stories": [
+    {
+      "id": "e6a12b3f4c5d6e7f",
+      "title": "Led backend migration to microservices",
+      "situation": "Our legacy monolithic e-commerce backend was struggling to scale during peak events, causing severe latency and occasional outages.",
+      "task": "I was tasked with architecting and leading the migration to a TypeScript microservices architecture with zero downtime.",
+      "action": "I designed service boundaries using domain-driven design, wrote the migration playbooks, coordinated with three frontend engineers, and deployed using a canary release strategy.",
+      "result": "We cut API latency by 40%, reduced deployment times from 45 minutes to 8 minutes, and handled Black Friday traffic with 100% uptime.",
+      "reflection": "Looking back, the key learning was knowing when to prioritise depth over breadth. The tradeoff between speed and long-term quality was deliberate and paid off.",
+      "shortVersion": "Our legacy monolith was failing during traffic peaks. I led the migration to TypeScript microservices using canary deploys. We cut latency by 40% and handled Black Friday with zero downtime.",
+      "longVersion": "Our legacy monolithic e-commerce backend was struggling to scale during peak events, causing severe latency and occasional outages.\n\nI was tasked with architecting and leading the migration to a TypeScript microservices architecture with zero downtime.\n\nI designed service boundaries using domain-driven design, wrote the migration playbooks, coordinated with three frontend engineers, and deployed using a canary release strategy.\n\nWe cut API latency by 40%, reduced deployment times from 45 minutes to 8 minutes, and handled Black Friday traffic with 100% uptime.",
+      "talkingPoints": [
+        "Focus on the zero-downtime execution strategy",
+        "Highlight cross-functional coordination with frontend teams",
+        "Mention the domain-driven design tradeoffs"
+      ],
+      "pitfallsToAvoid": [
+        "Avoid over-explaining the old monolith architecture",
+        "Keep the focus on personal leadership and decisions made"
+      ],
+      "tags": [
+        "typescript",
+        "architecture",
+        "migration",
+        "backend",
+        "leadership"
+      ],
+      "competencies": [
+        "Technical Execution",
+        "Cross-functional Collaboration",
+        "System Design"
+      ],
+      "senioritySignals": [
+        "Architecture ownership",
+        "Risk mitigation (canary deploys)"
+      ],
+      "domains": [
+        "E-commerce",
+        "High Scale Systems"
+      ],
+      "jobIds": [
+        "358f9ea1-8d3b-4ea0-8457-1ccb3fd868ea"
+      ],
+      "sourceEvaluationIds": [
+        "358f9ea1-8d3b-4ea0-8457-1ccb3fd868ea"
+      ],
+      "evidenceSource": "evaluation",
+      "confidence": 0.85,
+      "confidenceLevel": "high",
+      "proofNotes": [],
+      "status": "polished",
+      "usageCount": 1,
+      "createdAt": "2026-05-04T10:00:00.000Z",
+      "updatedAt": "2026-05-04T12:00:00.000Z",
+      "lastUsedAt": "2026-05-04T12:00:00.000Z"
+    }
+  ]
+}

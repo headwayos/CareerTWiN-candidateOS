@@ -1,0 +1,17 @@
+{
+  "jobId": "123e4567-e89b-12d3-a456-426614174000",
+  "company": "Acme Corp",
+  "title": "Senior Distributed Systems Engineer",
+  "createdAt": "2026-05-01T10:15:00.000Z",
+  "status": "draft",
+  "evaluationBand": "strong-apply",
+  "evaluationScore": 85,
+  "evaluationArtifactPath": "../evaluations/123e4567-e89b-12d3-a456-426614174000.json",
+  "trackerEntryId": "987c654b-a12d-34ef-5678-426614174222",
+  "canonicalJobUrl": "https://acmecorp.com/careers/123456",
+  "artifacts": {
+    "coverLetter": "cover-letter.md",
+    "answers": "answers.json",
+    "reviewChecklist": "review-checklist.md"
+  }
+}

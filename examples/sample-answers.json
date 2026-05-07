@@ -1,0 +1,27 @@
+{
+  "jobId": "123e4567-e89b-12d3-a456-426614174000",
+  "generatedAt": "2026-05-01T10:15:00.000Z",
+  "answers": [
+    {
+      "questionKey": "why_interested",
+      "questionText": "Why are you interested in this role?",
+      "answer": "I'm drawn to this role because it aligns with my experience in Backend Engineering. Direct Match",
+      "source": "generated",
+      "editable": true
+    },
+    {
+      "questionKey": "relevant_experience",
+      "questionText": "What relevant experience do you have?",
+      "answer": "Key strengths: Extensive Go experience, Kafka and event-driven architecture expertise",
+      "source": "generated",
+      "editable": true
+    },
+    {
+      "questionKey": "compensation",
+      "questionText": "What is your expected compensation?",
+      "answer": "Based on market data: $175,000",
+      "source": "generated",
+      "editable": true
+    }
+  ]
+}

@@ -1,127 +1,178 @@
-# CareerTwin Candidate OS
+# CareerTWiN Candidate OS (CTOSS)
 
-A local-first, CLI-native operating system for managing career artifacts, evaluating job postings, and publishing decision packets to the CareerTwin founder marketplace.
+> **Status:** Public Alpha  
+> **Note:** CTOSS is a local-first candidate operating system. There is no live cloud platform, subscription, or web dashboard enabled in this release. Your data stays on your machine.
 
-Your data lives on your filesystem in `.careertwin/`. The Web UI is a secondary inspector. The CLI is the product.
+**CTOSS** is a local-first candidate operating system for selective technical job search. It provides an agency-grade, human-in-the-loop pipeline for ingesting, evaluating, and managing job applications with a strong emphasis on data privacy, determinism, and high-quality AI inference.
 
----
-
-## Repository Development Setup
-
-These instructions are for developers cloning and building the monorepo.
-
-### Prerequisites
-- Node.js ≥ 20
-- npm ≥ 10
-
-### Clone & Build
-
-```bash
-git clone https://github.com/headwayos/CareerTWiN-candidateOS.git
-cd CareerTWiN-candidateOS
-
-# Install all workspace dependencies
-npm install
-
-# Build every workspace in dependency order
-for pkg in packages/schemas packages/engine packages/document-engine packages/passport packages/shared packages/adapters apps/cli; do
-  echo "Building $pkg..." && (cd $pkg && npm run build)
-done
-```
-
-### Verify the Build
-
-```bash
-# This is the deterministic local execution path.
-# It runs the CLI from the built dist/ — no npm link, no stale global binary.
-npm run ct -- --version
-# → 0.1.0
-```
+## Why CTOSS?
+The modern job search is chaotic. Candidates are forced to track applications across messy spreadsheets, juggle multiple resume versions, and rely on opaque employer portals. CTOSS flips this model by providing a local, developer-centric pipeline:
+- **Local-First Privacy:** All artifacts (resumes, evaluations, trackers) live as flat files in `.careertwin/`.
+- **Model Agnostic:** Bring your own API keys (OpenAI, Anthropic, OpenRouter) or run a local model via Ollama.
+- **Human-in-the-loop Automation:** Generates high-quality, targeted drafts that *you* review. No autonomous spam.
+- **Developer Workflows:** Includes a powerful CLI (`ct`) and an interactive Terminal UI (TUI).
 
 ---
 
-## Candidate OS Usage
+## 🚀 Quickstart: The Canonical Demo Flow
 
-Once the repo is built, every `ct` command is invoked via `npm run ct -- <command>` from the repo root.
+Get started with the full local pipeline in less than 5 minutes. See [docs/quickstart.md](docs/quickstart.md) for details.
 
-### First-Run Smoke Test
+1. **Install and Build**
+   ```bash
+   npm install
+   npm run build
+   ```
 
-```bash
-# 1. Initialize the local OS
-npm run ct -- init
+2. **Initialize Workspace**
+   ```bash
+   npm run ct -- init
+   npm run ct -- doctor
+   ```
 
-# 2. Check environment health and provider readiness
-npm run ct -- doctor
+3. **Discover & Evaluate**
+   ```bash
+   # Scan a source for jobs
+   npm run ct -- scan --source remotive --limit 5
+   
+   # Batch evaluate the discovered jobs against your profile
+   npm run ct -- batch --limit 2
+   ```
 
-# 3. Import a resume (requires OPENAI_API_KEY for live parsing)
-npm run ct -- cv import my-resume.txt
+4. **Manage & Review (TUI)**
+   ```bash
+   # Launch the interactive Terminal UI
+   npm run ct -- tui
+   ```
 
-# 4. Or use demo mode without a provider
-npm run ct -- cv import my-resume.txt --mock
+5. **Prepare Application Packet**
+   ```bash
+   # Generate a draft application packet (cover letter, answers)
+   npm run ct -- apply draft <jobId> --mock
+   ```
 
-# 5. View your profile
-npm run ct -- profile show
-```
+---
 
-### Provider Configuration
+## 🔌 Provider Modes
 
-The Candidate OS uses a generic `ModelGateway` that supports any OpenAI-compatible provider.
+CTOSS supports two operating modes. **You do not need a paid API key to try the demo.**
+
+### Mode A — Real Provider (Recommended for production use)
+
+Set one of the following environment variables before running `batch` or `apply`:
 
 ```bash
 # OpenAI
 export OPENAI_API_KEY="sk-..."
 
-# Then run AI-dependent commands
-npm run ct -- cv import my-resume.txt
-npm run ct -- evaluate job-description.txt
+# Anthropic (via OpenAI-compatible endpoint)
+export ANTHROPIC_API_KEY="sk-ant-..."
+
+# OpenRouter
+export OPENROUTER_API_KEY="sk-or-..."
+
+# Local model (Ollama, LM Studio, vLLM, etc.)
+export CT_LOCAL_URL="http://localhost:11434/v1"
+export CT_MODEL="llama3"
 ```
 
-If no provider is configured, AI commands will fail loudly with setup instructions. You can always use `--mock` to test without a provider.
+Then run normally:
+```bash
+npm run ct -- batch --limit 2
+```
 
-### Optional: LaTeX Resume Compilation
+### Mode B — Mock / Demo Mode (For testing and QA)
 
-Install [Tectonic](https://tectonic-typesetting.github.io/) for PDF compilation:
+A lightweight mock OpenAI-compatible server is included in `tools/mock-provider/`. It returns deterministic synthetic responses — useful for demos, CI, and development without consuming API credits.
 
 ```bash
-# macOS
-brew install tectonic
+# Terminal 1 — start the mock provider
+node tools/mock-provider/server.js
 
-# Then build a resume
-npm run ct -- resume build --mode ats
+# Terminal 2 — use mock mode
+export CT_LOCAL_URL="http://localhost:3000/v1"
+export CT_MODEL="local-mock-model"
+npm run ct -- batch --limit 2
+npm run ct -- apply draft <jobId> --mock
 ```
 
-If Tectonic is not installed, the `.tex` source will still be generated; only PDF compilation is skipped.
+> **Note:** `--mock` on `apply draft` and `negotiation draft` forces mock LLM responses even without the mock server running. The mock server is only needed for `batch` evaluation.
+
+> **The mock server is a QA/demo tool only. It is not required for, and does not affect, normal product usage with a real provider.**
 
 ---
 
-## Troubleshooting
+## 🏗 Architecture
 
-**`npm run ct` says "Missing script"**
-→ You are not in the repo root, or `package.json` is missing the `ct` script. Run from the cloned directory.
+CTOSS is built as a TypeScript monorepo with a dedicated Go-based TUI.
 
-**`Cannot find module '@careertwin/engine'`**
-→ Workspaces were not built. Run the full build loop above.
+```mermaid
+flowchart TD
+    subgraph Interfaces
+        CLI[CT CLI / Node.js]
+        TUI[CT TUI / Go]
+    end
 
-**`Provider (openai) Not configured` in `ct doctor`**
-→ Set `export OPENAI_API_KEY="sk-..."` or run with `--mock`.
+    subgraph Core Engines
+        ScanEngine[Scanner]
+        BatchEngine[Evaluation]
+        ApplyEngine[Apply / Draft]
+        PipelineEngine[Pipeline Integrity]
+    end
 
-**`ct cv import` creates `[DEMO] Mock User`**
-→ You used the `--mock` flag. Remove it and configure a provider for real parsing.
+    subgraph Adapters & AI
+        ModelGateway[Model Gateway\nOpenAI/Anthropic/Local]
+        Connectors[Board Connectors\nGreenhouse/Lever/etc]
+    end
+
+    subgraph Local File System
+        DB[(.careertwin/)]
+        Tracker[tracker/]
+        Evals[jobs/evaluations/]
+        ApplyPkgs[jobs/applications/]
+        Profile[profile/]
+    end
+
+    CLI --> Core Engines
+    TUI --> DB
+    Core Engines --> ModelGateway
+    Core Engines --> Connectors
+    Core Engines --> DB
+```
+
+Read the full architecture overview in [docs/architecture.md](docs/architecture.md).
 
 ---
 
-## Assistant Adapters
+## 📊 Status / Readiness
 
-The OS is designed to be operated by AI IDEs autonomously.
-
-- **Primary**: The **Antigravity Adapter** wraps the Engine as a thin operator surface.
-- **Immediate**: **Claude Code**, **Trae**, or any terminal-capable AI can operate the system via `ct` commands directly.
-- **Extensible**: New adapters implement the shared `AssistantAdapter` contract — they do not contain inference logic, which lives in the Engine's `ModelGateway`.
+| Feature / Phase | Status | Description |
+| :--- | :--- | :--- |
+| **Phase 1: Report Parity** | ✅ Complete | Deterministic profile ingestion and 6-block JSON evaluation reports. |
+| **Phase 2A: Dashboard Summary** | ✅ Complete | CLI tabular views of evaluation bands and scores. |
+| **Phase 2B: Full TUI** | ✅ Complete | Interactive Go-based Terminal UI for tracking pipeline state. |
+| **Phase 3: Scanner + Batch** | ✅ Complete | Automated board discovery, deduplication, and batch processing. |
+| **Phase 4: Apply + Integrity** | ✅ Complete | Draft packet generation, review checklists, and pipeline audits. |
+| **Phase 5: Story Bank + Interview + Negotiation** | ✅ Complete | STAR story bank (v2.1), interview prep packs, and local-first negotiation scripts. |
+| **Phase 6: Differentiation** | 🔜 Coming | Deep research artifacts and unique value proposition generation. |
+| **Phase 7: Cloud / Mobile Sync**| ⏸ Deferred | Future sync boundaries and multi-device platforms. |
 
 ---
 
-## Documentation
+## 📚 Documentation Directory
 
-- **[CLI Reference](docs/CLI_REFERENCE.md)** — Full command list with examples
-- **[Passport & Trust Boundaries](docs/PASSPORT.md)** — Data visibility and marketplace behavior
-- **[Contributing](CONTRIBUTING.md)** — OSS setup and guidelines
+- **[Quickstart](docs/quickstart.md):** Canonical demo and setup flow.
+- **[Commands Reference](docs/commands.md):** Detailed guide to all `ct` CLI commands.
+- **[Architecture](docs/architecture.md):** Deep dive into the engine, TUI, and integration layers.
+- **[Local Data Model](docs/local-data-model.md):** Understanding the `.careertwin/` file structure.
+- **[Roadmap](docs/roadmap.md):** Our planned progression from local OS to cloud platform.
+- **[FAQ](docs/faq.md):** Common questions about providers, local modes, and privacy.
+- **[Development Setup](docs/development.md):** Guide for contributors.
+
+## 🤝 Contributing
+
+We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on how to submit issues, features, and PRs.
+
+## 📄 License
+
+This project is licensed under the Apache 2.0 License - see the [LICENSE](LICENSE) file for details.

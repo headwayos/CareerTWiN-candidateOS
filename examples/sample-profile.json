@@ -1,0 +1,59 @@
+{
+  "bio": {
+    "name": "Jane Doe",
+    "email": "jane@example.com",
+    "phone": "+1 555-0100",
+    "location": "San Francisco, CA",
+    "summary": "Senior Software Engineer with 6 years of experience building highly available distributed systems in Go and Node.js. Passionate about API design and system reliability.",
+    "links": {
+      "github": "https://github.com/janedoe",
+      "linkedin": "https://linkedin.com/in/janedoe"
+    }
+  },
+  "skills": [
+    "Go",
+    "Node.js",
+    "TypeScript",
+    "Distributed Systems",
+    "Kafka",
+    "Kubernetes",
+    "PostgreSQL",
+    "Redis"
+  ],
+  "experience": [
+    {
+      "company": "TechScale Inc",
+      "role": "Senior Backend Engineer",
+      "startDate": "2021-03",
+      "endDate": "Present",
+      "current": true,
+      "highlights": [
+        "Architected an event-driven microservices platform in Go, handling 50k RPS.",
+        "Migrated legacy monolithic services to Kubernetes, reducing deployment time by 40%.",
+        "Mentored a team of 4 engineers and led cross-functional technical designs."
+      ],
+      "stack": ["Go", "Kafka", "Kubernetes", "PostgreSQL"]
+    },
+    {
+      "company": "StartupX",
+      "role": "Software Engineer",
+      "startDate": "2018-07",
+      "endDate": "2021-02",
+      "current": false,
+      "highlights": [
+        "Developed core backend APIs in Node.js and TypeScript for a B2B SaaS platform.",
+        "Optimized Redis caching strategy, reducing database load by 60%."
+      ],
+      "stack": ["Node.js", "TypeScript", "Redis", "AWS"]
+    }
+  ],
+  "education": [
+    {
+      "institution": "State University",
+      "degree": "B.S.",
+      "field": "Computer Science",
+      "startDate": "2014-09",
+      "endDate": "2018-05"
+    }
+  ]
+}

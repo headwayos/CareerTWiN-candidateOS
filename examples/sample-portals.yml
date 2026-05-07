@@ -1,0 +1,24 @@
+sources:
+  - sourceType: greenhouse
+    company: Stripe
+    careersUrl: https://boards.greenhouse.io/stripe
+    enabled: true
+    tags: ["fintech"]
+    geography: US
+    workMode: remote
+
+  - sourceType: lever
+    company: Figma
+    careersUrl: https://jobs.lever.co/figma
+    enabled: true
+    tags: ["design"]
+    geography: US
+    workMode: remote
+
+  - sourceType: hackernews
+    company: Hacker News Jobs
+    careersUrl: https://news.ycombinator.com/jobs
+    enabled: true
+    tags: ["startup"]
+    geography: remote
+    workMode: any

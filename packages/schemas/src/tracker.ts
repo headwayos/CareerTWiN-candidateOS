@@ -1,9 +1,10 @@
 import { z } from 'zod';
 
 export const ApplicationStatusSchema = z.enum([
-  'evaluated', 'shortlisted', 'tailored', 'applied',
+  'evaluated', 'shortlisted', 'tailored', 'ready-to-apply', 'applied',
   'follow-up', 'interview', 'rejected', 'offer', 'ghosted'
 ]);
+
 
 export const ApplicationTrackerItemSchema = z.object({
   id: z.string().uuid(),

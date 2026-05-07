@@ -164,4 +164,23 @@ export class ModelGateway {
       throw new Error(`ModelGateway: Failed to parse JSON response: ${e.message}`);
     }
   }
+
+  async generateText(systemPrompt: string, userContent: string): Promise<string> {
+    if (!this.client) {
+      throw new Error('ModelGateway: Provider not configured.');
+    }
+
+    const response = await this.client.chat.completions.create({
+      model: this.config.model,
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userContent }
+      ]
+    });
+
+    const content = response.choices[0].message.content;
+    if (!content) throw new Error("No content returned from provider.");
+
+    return content.trim();
+  }
 }

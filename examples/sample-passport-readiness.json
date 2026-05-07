@@ -1,0 +1,10 @@
+{
+  "readinessScore": 95,
+  "lastEvaluatedAt": "2026-05-01T10:00:00.000Z",
+  "missingFields": [],
+  "improvementSuggestions": [
+    "Consider adding more specific metrics to your StartupX experience.",
+    "Add a link to a personal portfolio or blog if available."
+  ],
+  "isReady": true
+}

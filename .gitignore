@@ -1,9 +1,33 @@
+# Build outputs
 node_modules/
 dist/
-.careertwin/
-*.pdf
-*.log
 .next/
 .turbo/
+build/
+
+# CareerTwin local database / workspace
+.careertwin/
+data/
+
+# Environment variables
 .env
-.env.local
+.env.*
+!.env.example
+
+# OS / Editor junk
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.log
+
+# Personal files & artifacts
+*.pdf
+*.docx
+*.tex
+/Test.pdf
+
+# Internal proofs / scratch
+PHASE*-PROOF/
+TESTING-RESULT/
+TESTRESULT2/

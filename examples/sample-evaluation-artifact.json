@@ -1,0 +1,111 @@
+{
+  "schemaVersion": "v2.0",
+  "jobId": "123e4567-e89b-12d3-a456-426614174000",
+  "evaluatedAt": "2026-05-01T10:05:00.000Z",
+  "recommendationBand": "strong-apply",
+  "scores": {
+    "overall": 85,
+    "skills": 90,
+    "experience": 80,
+    "startupFit": 85,
+    "compensationFit": 88
+  },
+  "senioritySignal": "senior",
+  "blockA_roleSummary": {
+    "title": "Senior Distributed Systems Engineer",
+    "company": "Acme Corp",
+    "level": "Senior",
+    "workMode": "remote",
+    "location": "US",
+    "compensationRange": "$150,000 - $190,000 + Equity",
+    "archetype": "Infrastructure Engineer",
+    "domain": "Logistics",
+    "function": "Backend Engineering",
+    "tldr": "Lead architecture for a high-throughput message broker system in Go.",
+    "whyThisMatters": "Critical path infrastructure for global logistics; high impact and technical complexity."
+  },
+  "blockB_cvMatch": {
+    "overallMatchPct": 85,
+    "requirements": [
+      {
+        "requirement": "5+ years of software engineering experience",
+        "evidence": "Candidate has 6 years total experience.",
+        "strength": "strong"
+      },
+      {
+        "requirement": "Strong proficiency in Go, Rust, or C++",
+        "evidence": "Candidate has extensive experience building in Go at TechScale Inc.",
+        "strength": "strong"
+      },
+      {
+        "requirement": "Experience with Kafka, Redis",
+        "evidence": "Candidate used Kafka at TechScale and Redis at StartupX.",
+        "strength": "strong"
+      }
+    ],
+    "topMatches": [
+      "Extensive Go experience",
+      "Kafka and event-driven architecture expertise",
+      "Senior-level system design capabilities"
+    ],
+    "gaps": [
+      {
+        "gap": "No explicit mention of Kubernetes or cloud-native ecosystems.",
+        "severity": "minor",
+        "mitigation": "Highlight containerization experience if any, or willingness to learn."
+      }
+    ],
+    "risks": []
+  },
+  "blockC_levelStrategy": {
+    "jdLevel": "Senior",
+    "candidateLevel": "Senior",
+    "levelAlignment": "match",
+    "strategyName": "Direct Match",
+    "talkingPoints": [
+      "Emphasize technical leadership at TechScale.",
+      "Highlight experience scaling systems to handle high RPS."
+    ]
+  },
+  "blockD_compensationDemand": {
+    "compScore": 88,
+    "benchmarkTable": [
+      {
+        "level": "Senior",
+        "geography": "US Remote",
+        "companyType": "startup-growth",
+        "p50": "$175,000",
+        "source": "Market Data"
+      }
+    ],
+    "demandContext": "Base salary range aligns well with candidate expectations.",
+    "attractivenessCommentary": "Solid compensation package with equity upside."
+  },
+  "blockE_personalizationPlan": {
+    "cvChanges": [
+      {
+        "section": "Experience",
+        "change": "Add specific metrics around Kafka throughput at TechScale.",
+        "rationale": "Directly addresses core requirement of the role.",
+        "priority": "high"
+      }
+    ],
+    "linkedInChanges": []
+  },
+  "blockF_interviewPrep": {
+    "readinessScore": 80,
+    "stories": [
+      {
+        "storyId": "scale-techscale",
+        "title": "Scaling TechScale Event Platform",
+        "requirementMapped": "Proven track record of operating services at scale.",
+        "situation": "Monolithic system was failing under load.",
+        "task": "Migrate to event-driven architecture.",
+        "action": "Architected Go microservices using Kafka.",
+        "result": "Supported 50k RPS with zero downtime.",
+        "tags": ["Go", "Kafka", "Scaling"],
+        "confidenceLevel": "high"
+      }
+    ]
+  }
+}

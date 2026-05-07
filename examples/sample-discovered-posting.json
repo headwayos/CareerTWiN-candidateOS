@@ -1,0 +1,14 @@
+{
+  "discoveredId": "123e4567-e89b-12d3-a456-426614174000",
+  "sourceUrl": "https://boards.greenhouse.io/acmecorp/jobs/123456",
+  "canonicalUrl": "https://acmecorp.com/careers/123456",
+  "company": "Acme Corp",
+  "title": "Senior Distributed Systems Engineer",
+  "remoteMode": "remote",
+  "workModeHint": "remote",
+  "discoveredAt": "2026-05-01T10:00:00.000Z",
+  "scanRunId": "987e6543-e21b-34c5-b678-426614174111",
+  "connectorId": "greenhouse",
+  "processingStatus": "skipped",
+  "dedupeKey": "acme corp:senior distributed systems engineer"
+}
