@@ -224,16 +224,6 @@ profileCmd
     console.log(renderBox(`${header}\n\n${summary}\n${skills}${expBlock}`, 'Candidate Profile'));
   });
 
-// ─── ct profile ingest ──────────────────────────────────────
-profileCmd
-  .command('ingest')
-  .description('Interactively ingest profile data')
-  .action(async () => {
-    console.log(brand.warn('\n  Profile ingestion requires a configured provider.'));
-    console.log(brand.dim('  Use "npm run ct -- cv import <file>" to import from an existing CV.'));
-    console.log(brand.dim('  Run "npm run ct -- doctor" to check provider readiness.\n'));
-  });
-
 // ─── ct cv import ───────────────────────────────────────────
 program
   .command('cv')

@@ -46,7 +46,7 @@ flowchart TD
 
 ### Engines
 - **ScanEngine**: Connects to remote job boards via `connectors`, pulls job descriptions, normalizes them into a unified `DiscoveredPosting` schema, and writes them to `.careertwin/jobs/discovered/`.
-- **BatchEngine**: Runs a local deduplication pass against the tracker. It then invokes the `ModelGateway` to parse the JD against your `profile.json` to generate a 6-block Evaluation Artifact.
+- **BatchEngine**: Runs a local deduplication pass against the tracker. It then invokes the `ModelGateway` to parse the JD against your `candidate.json` to generate a 6-block Evaluation Artifact.
 - **ApplyEngine**: Assembles a draft `ApplyPacket`. It extracts cover-letter context and application answers, creating a human-in-the-loop review checklist.
 - **PipelineEngine**: The integrity layer. Audits `.careertwin/` for orphan state, duplicates, and missing artifacts.
 

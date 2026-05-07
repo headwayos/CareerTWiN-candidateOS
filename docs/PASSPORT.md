@@ -34,16 +34,18 @@ Data that is freely indexable by the CareerTwin search engine and visible to any
 
 ---
 
-## Marketplace Actions
+## Marketplace Actions (Roadmap)
 
-### Publishing your Passport
+> **IMPORTANT**: Live marketplace synchronization and the authenticated Supabase bridge are **not enabled** in the Public Alpha. These commands are placeholders for future releases.
+
+### Publishing your Passport (Roadmap)
 ```bash
 ct passport publish
 ```
-This command establishes an authenticated bridge with the Supabase backend. It reads your local `.careertwin/artifacts/passports/passport.json`, strips any data flagged as `Private`, and syncs it. Your profile becomes "Active" on the marketplace.
+In future releases, this command will establish an authenticated bridge with the Supabase backend. It will read your local `.careertwin/artifacts/passports/passport.json`, strip any data flagged as `Private`, and sync it to the CareerTwin Marketplace.
 
-### Unpublishing your Passport
+### Unpublishing your Passport (Roadmap)
 ```bash
 ct passport unpublish
 ```
-If you accept an offer or simply want to hide your profile, this command instantly revokes marketplace visibility. Your data remains perfectly intact in your local OS, but Founders will no longer be able to discover or view your Passport online.
+A future command to instantly revoke marketplace visibility while keeping your local data intact. Your data remains perfectly intact in your local OS, but Founders will no longer be able to discover or view your Passport online.

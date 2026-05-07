@@ -7,19 +7,20 @@ The CareerTWiN OS is driven primarily through the `ct` command-line interface.
 ### `ct init`
 Initializes a new local workspace in the current directory (`.careertwin/`).
 - Generates the base folder structure.
-- Creates a `profile.json` template.
-- Creates `portals.yml` template.
+- Creates the `portals.yml` template.
 
 ### `ct doctor`
 Runs a health check on the current workspace.
 - Validates the presence of required directories.
-- Validates the `profile.json` schema.
+- Checks if `profile/candidate.json` is present (your candidate profile).
 - Checks the configured AI provider credentials (OpenAI, Anthropic, OpenRouter, Local).
 
 ## Ingestion & Passports
 
-### `ct ingest cv <path-to-pdf>`
-Ingests a candidate resume (PDF) and converts it into the structured `profile.json` format.
+### `ct cv import <path-to-pdf>`
+Ingests a candidate resume (PDF or text file) and converts it into the structured `profile/candidate.json` format.
+**Options:**
+- `--mock`: Create a demo profile without a live AI provider.
 
 ### `ct passport verify`
 Validates the candidate's profile completeness against the `PassportReadinessSchema`. Ensures required fields (bio, skills, experience) are present before allowing evaluations.

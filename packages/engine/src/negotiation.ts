@@ -47,7 +47,7 @@ export class NegotiationEngine {
       ctx.trackerEntry = entries.find(e => e.jobId === jobId);
     } catch (e) {}
 
-    const profilePath = this.workspace.getPath('profile/profile.json');
+    const profilePath = this.workspace.getPath('profile/candidate.json');
     if (await fs.pathExists(profilePath)) {
       try {
         ctx.profile = await fs.readJson(profilePath);
@@ -135,6 +135,39 @@ export class NegotiationEngine {
   }
 
   private async generateNegotiationPlan(ctx: NegotiationContext, useMock: boolean): Promise<NegotiationPlanFile> {
+    if (useMock) {
+      return {
+        roleSnapshot: {
+          title: ctx.evaluation?.blockA_roleSummary?.title ?? 'Role',
+          company: ctx.evaluation?.blockA_roleSummary?.company ?? 'Company'
+        },
+        compensationSummary: {
+          targetBase: "$180,000",
+          minimumBase: "$150,000",
+          expectedRange: "$150k - $190k",
+          marketRange: "$160k - $200k",
+          currency: "USD",
+          confidence: "medium",
+          sourceNotes: ["Mock data generated for demo"],
+          manualReviewRequired: true
+        },
+        leverage: {
+          strengths: ["Strong technical match", "Domain expertise"],
+          risks: ["Salary at top of range"],
+          proofPoints: ["Open source contributions", "Previous measurable impact"],
+          alternatives: ["Additional equity", "Remote flexibility", "Accelerated review cycle"]
+        },
+        risks: ["Salary at top of band", "No competing offers currently"],
+        strategy: {
+          openingPosition: "Enthusiastic but firm on target range",
+          safeAsk: "$175k",
+          fallbackAsk: "$165k + extra equity",
+          walkAwayLine: "$150k",
+          nonCashLevers: ["Sign-on bonus", "Learning budget", "Remote flexibility"]
+        }
+      };
+    }
+
     const prompt = `You are an expert career and compensation negotiation coach.
 Generate a negotiation plan for the candidate based on the provided evaluation.
 
@@ -164,6 +197,14 @@ Return ONLY valid JSON matching the exact schema.`;
   }
 
   private async generateScripts(ctx: NegotiationContext, useMock: boolean): Promise<{ recruiter: string, founder: string, downlevel: string }> {
+    if (useMock) {
+      return {
+        recruiter: "Hi [Recruiter Name], I've reviewed the offer. I'm very excited about the role. Based on my research and the value I'll bring to the team, I was hoping for a base salary closer to $180k. Is there any flexibility there?",
+        founder: "Hey [Founder Name], I really believe in the mission. I'm less concerned with the exact cash split and more focused on having significant skin in the game through equity. Can we discuss a higher equity percentage for a slightly lower base?",
+        downlevel: "I understand the decision to bring me in at this level. However, given my experience at [Previous Company], I'd like to ensure there is a clear path and timeline for me to reach the Senior level within 6-12 months."
+      };
+    }
+
     const prompt = `You are an expert tech negotiation coach. Generate three distinct markdown scripts for the candidate:
 1. recruiter: Script for talking to a recruiter. Include standard comp response, "flexible but aligned", and "need more info".
 2. founder: Script for talking to a startup founder. Focus on mission alignment, equity, and scope over pure cash.

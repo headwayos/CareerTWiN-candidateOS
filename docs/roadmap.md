@@ -6,7 +6,7 @@ CTOSS is being built iteratively, moving from a fully local tool toward a hybrid
 
 ### Phase 1: Report Parity
 - Foundation of the local database (`.careertwin/`).
-- Ingestion engine to convert PDF CVs into `profile.json`.
+- Ingestion engine to convert PDF CVs into `candidate.json`.
 - Batch engine and Model Gateway architecture.
 - 6-block JSON schema for deep evaluation artifacts.
 

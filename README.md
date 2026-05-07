@@ -24,11 +24,13 @@ Get started with the full local pipeline in less than 5 minutes. See [docs/quick
    npm run build
    ```
 
-2. **Initialize Workspace**
+2. **Initialize Workspace & Import CV**
    ```bash
    npm run ct -- init
+   npm run ct -- cv import ./path/to/resume.pdf --mock
    npm run ct -- doctor
    ```
+   > Profile is saved to `.careertwin/profile/candidate.json` (gitignored).
 
 3. **Discover & Evaluate**
    ```bash

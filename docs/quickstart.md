@@ -22,13 +22,21 @@ npm run build
 ```
 
 ## Step 2: Initialize Workspace
-The `init` command scaffolds the `.careertwin/` local database directory and generates a sample candidate profile.
+The `init` command scaffolds the `.careertwin/` local database directory.
 ```bash
 npm run ct -- init
 ```
 
+## Step 2.5: Import CV (Profile Setup)
+Import your existing CV (PDF or text) to create your structured candidate profile. This profile is stored locally in `.careertwin/profile/candidate.json`.
+```bash
+# Replace with the path to your actual resume
+npm run ct -- cv import ./path/to/resume.pdf --mock
+```
+> **Note:** The `--mock` flag allows you to parse the CV without a live AI provider for this demo. The generated profile stays on your machine and is ignored by git.
+
 ## Step 3: Check System Health
-Run the doctor command to ensure your workspace is valid and an AI provider is configured.
+Run the doctor command to ensure your workspace is valid and your profile is loaded.
 ```bash
 npm run ct -- doctor
 ```

@@ -31,3 +31,9 @@ data/
 PHASE*-PROOF/
 TESTING-RESULT/
 TESTRESULT2/
+
+# apps/tui binaries
+apps/tui/tui
+apps/tui/*.exe
+apps/tui/bin/
+

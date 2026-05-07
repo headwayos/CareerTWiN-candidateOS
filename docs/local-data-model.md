@@ -27,7 +27,7 @@ All data resides in your initialized workspace folder: `.careertwin/`.
 │   └── evaluations/             # 6-block JSON reports from BatchEngine
 │       └── <jobId>.json
 ├── profile/
-│   ├── profile.json             # Core candidate identity and experience
+│   ├── candidate.json           # Core candidate identity and experience
 │   ├── source-cv.pdf            # Original ingested PDF
 │   └── story-bank.json          # Interview preparation STAR stories
 └── tracker/
@@ -36,8 +36,8 @@ All data resides in your initialized workspace folder: `.careertwin/`.
 
 ## Key Artifacts
 
-### 1. Profile (`profile/profile.json`)
-The immutable source of truth for your professional identity. Extracted via `ct ingest` from your PDF resume. Used by the `BatchEngine` to perform job compatibility evaluations.
+### 1. Profile (`profile/candidate.json`)
+The immutable source of truth for your professional identity. Extracted via `ct cv import` from your PDF resume. Used by the `BatchEngine` to perform job compatibility evaluations.
 
 ### 2. Discovered Posting (`jobs/discovered/*.json`)
 A normalized representation of a remote job description. Contains the canonical URL, source, and raw markdown of the job description.
