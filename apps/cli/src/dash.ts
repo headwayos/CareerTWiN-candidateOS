@@ -6,6 +6,7 @@ import {
   TrackerEngine,
   StoryBankEngine,
 } from '@careertwin/engine';
+import type { Story } from '@careertwin/schemas';
 
 let boxen: any;
 try { boxen = require('boxen'); } catch { boxen = null; }
@@ -192,9 +193,9 @@ async function panelStories(storyBank: StoryBankEngine): Promise<string> {
     return renderPanel('C · Story Bank', brand.dim('  No stories yet. Run ct evaluate to seed.'));
   }
 
-  const high = stories.filter(s => s.confidenceLevel === 'high').length;
-  const med  = stories.filter(s => s.confidenceLevel === 'medium').length;
-  const low  = stories.filter(s => s.confidenceLevel === 'low').length;
+  const high = stories.filter((s: Story) => s.confidenceLevel === 'high').length;
+  const med  = stories.filter((s: Story) => s.confidenceLevel === 'medium').length;
+  const low  = stories.filter((s: Story) => s.confidenceLevel === 'low').length;
 
   // Top tags
   const tagCounts: Record<string, number> = {};
@@ -208,7 +209,7 @@ async function panelStories(storyBank: StoryBankEngine): Promise<string> {
     .join(', ');
 
   // Newest story
-  const newest = stories.reduce((a, b) =>
+  const newest = stories.reduce((a: Story, b: Story) =>
     (a.createdAt ?? '') > (b.createdAt ?? '') ? a : b,
   );
   const newestDate = newest.createdAt?.slice(0, 10) ?? 'unknown';

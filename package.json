@@ -5,7 +5,8 @@
   "description": "Developer-first candidate operating system",
   "packageManager": "npm@10.5.0",
   "workspaces": [
-    "apps/*",
+    "apps/cli",
+    "apps/tui",
     "packages/*"
   ],
   "scripts": {

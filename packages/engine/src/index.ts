@@ -10,3 +10,7 @@ export * from './pipeline';
 export * from './interview';
 export * from './negotiation';
 export * from './demo';
+export * from './tailor';
+export * from './evidence';
+export * from './scanner';
+export * from './story-bank';
