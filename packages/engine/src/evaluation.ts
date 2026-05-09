@@ -14,9 +14,9 @@ export class EvaluationEngine {
     private gateway?: ModelGateway
   ) {}
 
-  async evaluateJob(jdText: string, profile: CandidateProfile, options?: { mock?: boolean }): Promise<EvaluationRun> {
+  async evaluateJob(jdText: string, profile: CandidateProfile, options?: { mock?: boolean, mockMetadata?: any }): Promise<EvaluationRun> {
     if (options?.mock) {
-      return this.mockEvaluation(jdText);
+      return this.mockEvaluation(jdText, options.mockMetadata);
     }
 
     if (!this.gateway) {
@@ -111,17 +111,88 @@ All fields are mandatory. Be objective and specific. Use real candidate evidence
     (parsed as any).jobId = crypto.randomUUID();
     (parsed as any).evaluatedAt = new Date().toISOString();
 
-    const validated = EvaluationRunSchema.parse(parsed);
+    const repaired = this.repairEvaluationOutput(parsed);
+    const validated = EvaluationRunSchema.parse(repaired);
     await this.saveEvaluation(validated);
     return validated;
   }
 
-  private async mockEvaluation(_jdText: string): Promise<EvaluationRun> {
-    const jobId = crypto.randomUUID();
+  private repairEvaluationOutput(raw: any): any {
+    if (!raw || typeof raw !== 'object') return raw;
+    let didRepair = false;
+
+    // Helper to safely stringify numeric IDs
+    const ensureStringId = (id: any, fallback: string) => {
+      if (id === null || id === undefined || id === '') {
+        didRepair = true;
+        return fallback;
+      }
+      if (typeof id === 'number') {
+        didRepair = true;
+        return String(id);
+      }
+      return id;
+    };
+
+    const ensureString = (val: any) => {
+      if (val === null || val === undefined) {
+        didRepair = true;
+        return "";
+      }
+      return val;
+    };
+
+    const ensureCleanArray = (arr: any) => {
+      if (!Array.isArray(arr)) return arr;
+      const clean = arr.filter(item => item !== "" && item !== null && item !== undefined);
+      if (clean.length !== arr.length) didRepair = true;
+      return clean;
+    };
+
+    if (raw.blockA_roleSummary) {
+      raw.blockA_roleSummary.location = ensureString(raw.blockA_roleSummary.location);
+      raw.blockA_roleSummary.compensationRange = ensureString(raw.blockA_roleSummary.compensationRange);
+    }
+
+    if (raw.blockB_cvMatch) {
+      raw.blockB_cvMatch.topMatches = ensureCleanArray(raw.blockB_cvMatch.topMatches);
+      raw.blockB_cvMatch.risks = ensureCleanArray(raw.blockB_cvMatch.risks);
+      if (Array.isArray(raw.blockB_cvMatch.requirements)) {
+        for (const req of raw.blockB_cvMatch.requirements) {
+          req.notes = ensureString(req.notes);
+        }
+      }
+    }
+
+    if (raw.blockC_levelStrategy) {
+      raw.blockC_levelStrategy.downlevelGuidance = ensureString(raw.blockC_levelStrategy.downlevelGuidance);
+    }
+
+    if (raw.blockF_interviewPrep && Array.isArray(raw.blockF_interviewPrep.stories)) {
+      let i = 1;
+      for (const story of raw.blockF_interviewPrep.stories) {
+        story.storyId = ensureStringId(story.storyId, `story-${i++}`);
+        story.tags = ensureCleanArray(story.tags);
+      }
+    }
+
+    if (didRepair) {
+      console.warn('  [WARN] Applied automatic repairs to local model output before validation.');
+    }
+
+    return raw;
+  }
+
+  private async mockEvaluation(jdText: string, mockMetadata?: any): Promise<EvaluationRun> {
+    const jobId = mockMetadata?.jobId || crypto.randomUUID();
     const now = new Date().toISOString();
     const storyId = crypto.createHash('sha256')
       .update('led migration' + 'Led the migration of a monolithic e-commerce backe')
       .digest('hex').slice(0, 16);
+
+    const company = mockMetadata?.company || '[DEMO] Acme Corp';
+    const title = mockMetadata?.title || '[DEMO] Senior Full-Stack Engineer';
+    const location = mockMetadata?.location || 'Remote – USA';
 
     const evaluation: EvaluationRun = {
       schemaVersion: 'v2.0',
@@ -139,16 +210,16 @@ All fields are mandatory. Be objective and specific. Use real candidate evidence
         actionableFixes: [],
       },
       blockA_roleSummary: {
-        title: '[DEMO] Senior Full-Stack Engineer',
-        company: '[DEMO] Acme Corp',
+        title,
+        company,
         level: 'Senior',
         workMode: 'remote',
-        location: 'Remote – USA',
+        location,
         compensationRange: '$140k–$180k',
         archetype: 'IC-focused builder',
         domain: 'Developer Tools',
         function: 'Full-Stack Eng',
-        tldr: 'Build and own core product features across a TypeScript monorepo.',
+        tldr: `Build and own core product features at ${company}.`,
         whyThisMatters: 'Strong alignment with your background in full-stack and startup ownership.',
       },
       blockB_cvMatch: {

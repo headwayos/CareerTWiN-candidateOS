@@ -9,6 +9,7 @@ import { StoryBankEngine } from './story-bank';
 export interface BatchOptions {
   limit?: number;
   concurrency?: number;
+  mock?: boolean;
 }
 
 export class BatchEngine {
@@ -44,7 +45,7 @@ export class BatchEngine {
     // Worker pool: process in chunks of `concurrency`
     for (let i = 0; i < pending.length; i += concurrency) {
       const chunk = pending.slice(i, i + concurrency);
-      const results = await Promise.allSettled(chunk.map(p => this.evaluateOne(p)));
+      const results = await Promise.allSettled(chunk.map(p => this.evaluateOne(p, opts)));
 
       for (let j = 0; j < results.length; j++) {
         const posting = chunk[j];
@@ -71,7 +72,7 @@ export class BatchEngine {
     return summary;
   }
 
-  private async evaluateOne(posting: DiscoveredPosting): Promise<{ band: string; score: number; evalResult?: any }> {
+  private async evaluateOne(posting: DiscoveredPosting, opts: BatchOptions): Promise<{ band: string; score: number; evalResult?: any }> {
     if (!posting.descriptionText || posting.descriptionText.trim().length < 20) {
       throw new Error('Description too short to evaluate');
     }
@@ -95,7 +96,15 @@ export class BatchEngine {
     const evalResult = await this.evaluation.evaluateJob(
       jd,
       profile,
-      { mock: !process.env.CT_LOCAL_URL && !process.env.OPENAI_API_KEY }
+      {
+        mock: opts.mock || (!process.env.CT_LOCAL_URL && !process.env.OPENAI_API_KEY),
+        mockMetadata: {
+          jobId: posting.discoveredId,
+          company: posting.company,
+          title: posting.title,
+          location: posting.location
+        }
+      }
     );
 
     const band  = evalResult?.recommendationBand ?? 'unknown';

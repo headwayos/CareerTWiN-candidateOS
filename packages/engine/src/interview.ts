@@ -337,7 +337,7 @@ export class InterviewEngine {
 
   async loadContext(jobId: string): Promise<PrepContext> {
     const evalPath      = this.workspace.getPath(`jobs/evaluations/${jobId}.json`);
-    const profilePath   = this.workspace.getPath('profile/profile.json');
+    const profilePath   = this.workspace.getPath('profile/candidate.json');
     const packetPath    = this.workspace.getPath(`jobs/applications/${jobId}/packet.json`);
     const storyMapPath  = this.workspace.getPath(`jobs/interview/${jobId}/story-map.json`);
     const discovPath    = this.workspace.getPath(`jobs/discovered`);
@@ -469,7 +469,7 @@ RULES:
     }
 
     const missingOptional: string[] = [];
-    if (!ctx.profile)     missingOptional.push('profile.json');
+    if (!ctx.profile)     missingOptional.push('candidate.json');
     if (!ctx.packet)      missingOptional.push('apply packet');
     if (!ctx.discovered)  missingOptional.push('discovered posting');
 

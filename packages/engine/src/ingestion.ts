@@ -69,6 +69,18 @@ export class IngestionEngine {
 
     if (!parsed.id) (parsed as any).id = crypto.randomUUID();
 
+    // Normalize empty arrays
+    if (Array.isArray(parsed.skills)) {
+      parsed.skills = parsed.skills.filter((s: string) => s && s.trim().length > 0);
+    }
+    if (Array.isArray(parsed.experience)) {
+      for (const exp of parsed.experience) {
+        if (Array.isArray(exp.highlights)) {
+          exp.highlights = exp.highlights.filter((h: string) => h && h.trim().length > 0);
+        }
+      }
+    }
+
     const validated = CandidateProfileSchema.parse(parsed);
     await this.saveProfile(validated);
     return validated;

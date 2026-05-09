@@ -142,13 +142,13 @@ export class NegotiationEngine {
           company: ctx.evaluation?.blockA_roleSummary?.company ?? 'Company'
         },
         compensationSummary: {
-          targetBase: "$180,000",
-          minimumBase: "$150,000",
-          expectedRange: "$150k - $190k",
-          marketRange: "$160k - $200k",
+          targetBase: "TBD",
+          minimumBase: "TBD",
+          expectedRange: "TBD",
+          marketRange: "TBD",
           currency: "USD",
-          confidence: "medium",
-          sourceNotes: ["Mock data generated for demo"],
+          confidence: "low",
+          sourceNotes: ["Demo-only values. Replace before real negotiation."],
           manualReviewRequired: true
         },
         leverage: {

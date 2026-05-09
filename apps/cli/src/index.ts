@@ -18,7 +18,8 @@ import {
   ApplyEngine,
   PipelineEngine,
   InterviewEngine,
-  NegotiationEngine
+  NegotiationEngine,
+  DemoEngine
 } from '@careertwin/engine';
 import { DocumentEngine } from '@careertwin/document-engine';
 import { PassportBuilder } from '@careertwin/passport';
@@ -88,6 +89,7 @@ const documents = new DocumentEngine(
     : path.join(__dirname, '../../packages/document-engine/templates')
 );
 const passport = new PassportBuilder(workspace);
+const demoEngine = new DemoEngine(workspace);
 
 // ─── Root Config ─────────────────────────────────────────────
 program
@@ -114,6 +116,23 @@ program
       console.log(renderBox(nextSteps, 'Next Steps'));
     } catch (error: any) {
       spinner.fail(brand.error(error.message));
+    }
+  });
+
+// ─── ct demo ─────────────────────────────────────────────────
+const demoCmd = program
+  .command('demo')
+  .description('Manage demo and synthetic data workspaces');
+
+demoCmd
+  .command('seed')
+  .description('Seed a synthetic demo workspace for testing without API keys')
+  .option('--force', 'Overwrite existing workspace data')
+  .action(async (opts) => {
+    try {
+      await demoEngine.seedDemo({ force: opts.force });
+    } catch (error: any) {
+      console.log(brand.error(`\n  ${error.message}\n`));
     }
   });
 
@@ -206,14 +225,18 @@ profileCmd
     }
 
     const header = `${brand.header(profile.bio.name)}\n${brand.dim(profile.bio.email || '')}`;
-    const summary = `${brand.accent('Summary')}  ${profile.bio.summary}`;
-    const skills = `${brand.accent('Skills')}   ${profile.skills.join(', ')}`;
+    const summary = `${brand.accent('Summary')}\n  ${profile.bio.summary}`;
+    const skills = `${brand.accent('Skills')}\n  ${profile.skills.join(', ')}`;
     
     let expBlock = '';
     if (profile.experience && profile.experience.length > 0) {
       expBlock = '\n' + brand.accent('Experience') + '\n';
       for (const exp of profile.experience) {
-        expBlock += `  ${brand.bold(exp.role)} at ${exp.company}\n`;
+        let companyLabel = '';
+        if (exp.company) {
+          companyLabel = exp.company.toLowerCase().includes('freelance') ? '· Freelance' : `at ${exp.company}`;
+        }
+        expBlock += `  ${brand.bold(exp.role)} ${companyLabel}\n`;
         expBlock += `  ${brand.dim(`${exp.startDate} – ${exp.endDate || 'Present'}`)}\n`;
         for (const h of exp.highlights.slice(0, 2)) {
           expBlock += brand.dim(`    ${figures.bullet || '•'} ${h}`) + '\n';
@@ -221,7 +244,7 @@ profileCmd
       }
     }
 
-    console.log(renderBox(`${header}\n\n${summary}\n${skills}${expBlock}`, 'Candidate Profile'));
+    console.log(renderBox(`${header}\n\n${summary}\n\n${skills}\n${expBlock}`, 'Candidate Profile'));
   });
 
 // ─── ct cv import ───────────────────────────────────────────
@@ -276,8 +299,14 @@ program
 // ─── ct evaluate ────────────────────────────────────────────
 program
   .command('evaluate <source>')
-  .description('Evaluate a job posting against your profile')
+  .description('Evaluate a job posting against your profile. <source> can be a markdown JD, discovered job JSON, or URL.')
   .option('--mock', 'Run a demo evaluation without a provider')
+  .addHelpText('after', `
+Examples:
+  $ npm run ct -- evaluate examples/sample-jd.md
+  $ npm run ct -- evaluate .careertwin/jobs/discovered/12345.json
+  $ npm run ct -- evaluate examples/sample-jd.md --mock
+`)
   .action(async (source: string, opts: { mock?: boolean }) => {
     const spinner = ora({ text: brand.dim('Evaluating job...'), spinner: 'dots' }).start();
     try {
@@ -786,9 +815,9 @@ program
 
       for (const r of summary.sources) {
         const label = `${r.company} (${r.sourceType})`.slice(0, colW[0] - 1).padEnd(colW[0]);
-        const added   = (r.added > 0   ? brand.accent(String(r.added))   : brand.dim('0')).padEnd(colW[1]);
-        const deduped = (r.deduped > 0 ? brand.warn(String(r.deduped))   : brand.dim('0')).padEnd(colW[2]);
-        const failed  = (r.failed > 0  ? brand.error(String(r.failed))   : brand.dim('0')).padEnd(colW[3]);
+        const added   = r.added > 0   ? brand.accent(String(r.added).padEnd(colW[1]))   : brand.dim('0'.padEnd(colW[1]));
+        const deduped = r.deduped > 0 ? brand.warn(String(r.deduped).padEnd(colW[2]))   : brand.dim('0'.padEnd(colW[2]));
+        const failed  = r.failed > 0  ? brand.error(String(r.failed).padEnd(colW[3]))   : brand.dim('0'.padEnd(colW[3]));
         console.log(`  ${label}  ${added}  ${deduped}  ${failed}`);
         if ((r as any).error) console.log(`    ${brand.dim('↳ ' + (r as any).error)}`);
       }
@@ -810,6 +839,7 @@ program
   .description('Batch evaluate pending discovered jobs')
   .option('--limit <n>', 'max jobs to evaluate', parseInt)
   .option('--concurrency <n>', 'parallel worker count (default: 2)', parseInt)
+  .option('--mock', 'use local mock evaluation (does not require provider)')
   .action(async (opts) => {
     const scanEngine  = new ScanEngine(workspace);
     const batchEngine = new BatchEngine(workspace, evaluation);
@@ -826,6 +856,7 @@ program
       const summary = await batchEngine.run({
         limit:       opts.limit,
         concurrency: opts.concurrency ?? 2,
+        mock:        opts.mock,
       });
       spinner.succeed(brand.success('Batch complete'));
 
@@ -882,7 +913,7 @@ applyCmd
       console.log(`    ✔ Application answers`);
       console.log(`    ✔ Review checklist`);
       if (packet.artifacts.tailoredResume) console.log(`    ✔ Tailored resume`);
-      else                                 console.log(`    ○ Tailored resume  ${brand.dim('(not found)')}`);
+      else                                 console.log(`    ○ Tailored resume  ${brand.dim(`(run: npm run ct -- tailor ${jobId})`)}`);
       console.log('');
       console.log(`  ${brand.dim('Packet:')} .careertwin/jobs/applications/${jobId.slice(0, 8)}...`);
       console.log(`  ${brand.dim('Next:')}   Review packet, then: npm run ct -- apply review ${jobId}\n`);
@@ -1357,7 +1388,8 @@ interviewCmd
 interviewCmd
   .command('questions <jobId>')
   .description('Display likely interview questions by category')
-  .action(async (jobId: string) => {
+  .option('--full', 'Show full answer strategy instead of truncating')
+  .action(async (jobId: string, opts: { full?: boolean }) => {
     const interview = new InterviewEngine(workspace);
     try {
       const qFile = await interview.loadQuestions(jobId);
@@ -1374,7 +1406,15 @@ interviewCmd
         for (const q of qs) {
           const risk = q.riskLevel === 'high' ? brand.error('●') : q.riskLevel === 'medium' ? brand.warn('●') : brand.dim('●');
           console.log(`  ${risk} ${q.question}`);
-          console.log(`    ${brand.dim('Strategy:')} ${q.answerStrategy.slice(0, 100)}`);
+          
+          let strategy = q.answerStrategy;
+          if (!opts.full && strategy.length > 100) {
+            // Find the last space before 97 chars to cut cleanly
+            const cutIndex = strategy.lastIndexOf(' ', 97);
+            strategy = strategy.slice(0, cutIndex > 0 ? cutIndex : 97) + '...';
+          }
+          
+          console.log(`    ${brand.dim('Strategy:')} ${strategy}`);
         }
         console.log('');
       }

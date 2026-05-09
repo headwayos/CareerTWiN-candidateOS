@@ -160,7 +160,14 @@ func (mod model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			case "u":
 				if len(mod.displayed) > 0 {
+					e := mod.displayed[mod.selectedIndex]
 					mod.statusOptIdx = 0
+					for i, s := range ui.StatusOptions {
+						if s == e.TrackerStatus {
+							mod.statusOptIdx = i
+							break
+						}
+					}
 					mod.screen = "status-modal"
 				}
 			}
